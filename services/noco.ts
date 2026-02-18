@@ -70,16 +70,13 @@ const parseAmount = (val: any): number => {
   return 0;
 };
 
-// --- CLIENTE HTTP DEL PROXY ---
-// ✅ SEGURO: Ya no enviamos el token al cliente
+// --- CLIENTE HTTP DEL API DE VERCEL ---
+// ✅ SEGURO: El token está en las variables de entorno de Vercel
 
 const fetchFromProxy = async <T>(endpoint: string, label: string): Promise<T[]> => {
-  const proxyUrl = NOCODB_CONFIG.PROXY_URL;
-
-  if (!proxyUrl) {
-    console.error(`[Proxy] URL del proxy no configurada`);
-    return [];
-  }
+  // En Vercel, el API está en el mismo dominio
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const apiUrl = baseUrl ? `${baseUrl}/api/nocodb/${endpoint}` : `/api/nocodb/${endpoint}`;
 
   let allRecords: T[] = [];
   let page = 1;
@@ -88,21 +85,18 @@ const fetchFromProxy = async <T>(endpoint: string, label: string): Promise<T[]> 
 
   try {
     while (!isLastPage) {
-      // Llamar al proxy en lugar de NocoDB directamente
-      const url = `${proxyUrl}/api/${endpoint}?limit=${limit}&offset=${(page - 1) * limit}`;
-
+      const url = `${apiUrl}?limit=${limit}&offset=${(page - 1) * limit}`;
       const response = await fetch(url);
 
       if (!response.ok) {
-        console.error(`[Proxy] Error ${response.status} obteniendo ${label}. URL: ${url}`);
+        console.error(`[API] Error ${response.status} obteniendo ${label}`);
         break;
       }
 
       const json: ProxyResponse<T> = await response.json();
 
-      // Debug: solo en desarrollo
-      if (page === 1 && json.list.length > 0) {
-        console.log(`[Proxy Debug] ${label}: ${json.list.length} registros`);
+      if (page === 1 && json.list?.length > 0) {
+        console.log(`[API Debug] ${label}: ${json.list.length} registros`);
       }
 
       if (json.list && Array.isArray(json.list)) {
@@ -111,21 +105,19 @@ const fetchFromProxy = async <T>(endpoint: string, label: string): Promise<T[]> 
         break;
       }
 
-      if (json.pageInfo && json.pageInfo.isLastPage) {
-        isLastPage = true;
-      } else if (!json.list || json.list.length < limit) {
+      if (json.pageInfo?.isLastPage || !json.list || json.list.length < limit) {
         isLastPage = true;
       } else {
         page++;
       }
 
-      if (page > 10) break; // Safety limit
+      if (page > 10) break;
     }
 
     return allRecords;
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Error desconocido';
-    console.error(`[Proxy] Fallo crítico obteniendo ${label}: ${msg}`);
+    console.error(`[API] Fallo crítico obteniendo ${label}: ${msg}`);
     return [];
   }
 };
