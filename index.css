@@ -1,9 +1,8 @@
 /* Import Google Fonts - must be first */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind CSS v4 import */
+@import "tailwindcss";
 
 /* Base styles */
 body {
@@ -74,28 +73,65 @@ html {
     box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
 }
 
-/* Status badges */
+/* Status badges - using native CSS instead of @apply */
 .status-badge {
-    @apply px-2 py-1 rounded-full text-xs font-medium;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 500;
 }
 
-/* Table styles */
+/* Table styles - using native CSS instead of @apply */
 .data-table {
-    @apply w-full text-sm text-left;
+    width: 100%;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    text-align: left;
 }
 
 .data-table thead {
-    @apply text-xs uppercase bg-gray-50 dark:bg-gray-800;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    text-transform: uppercase;
+    background-color: rgb(249 250 251);
+}
+
+.dark .data-table thead {
+    background-color: rgb(31 41 55);
 }
 
 .data-table th {
-    @apply px-4 py-3 font-semibold;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+    font-weight: 600;
 }
 
 .data-table td {
-    @apply px-4 py-3;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
 }
 
 .data-table tbody tr {
-    @apply border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50;
+    border-bottom-width: 1px;
+    border-color: rgb(243 244 246);
+}
+
+.dark .data-table tbody tr {
+    border-color: rgb(55 65 81);
+}
+
+.data-table tbody tr:hover {
+    background-color: rgb(249 250 251);
+}
+
+.dark .data-table tbody tr:hover {
+    background-color: rgb(31 41 55 / 0.5);
 }
