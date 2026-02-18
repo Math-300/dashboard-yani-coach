@@ -14,6 +14,13 @@
             "args": [
                 "@playwright/mcp@latest"
             ]
+        },
+        "vercel": {
+            "command": "npx",
+            "args": [
+                "mcp-remote",
+                "https://mcp.vercel.com"
+            ]
         }
     }
 }
