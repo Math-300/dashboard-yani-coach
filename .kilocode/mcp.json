@@ -1,0 +1,19 @@
+{
+    "mcpServers": {
+        "nocodb-yanizcoach": {
+            "command": "npx",
+            "args": [
+                "mcp-remote",
+                "https://app.nocodb.com/mcp/nckwqhfzvx17qxil",
+                "--header",
+                "xc-mcp-token: qG6IQZn5EZRHlfnnFBvlTwIKvaHuZz1d"
+            ]
+        },
+        "playwright": {
+            "command": "npx",
+            "args": [
+                "@playwright/mcp@latest"
+            ]
+        }
+    }
+}
