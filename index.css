@@ -1,0 +1,101 @@
+/* Import Google Fonts - must be first */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base styles */
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+/* Custom scrollbar for better aesthetics */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #D4AF37;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #B5952F;
+}
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Custom animations */
+@keyframes fadeInUp {
+    0% {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in-up {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+/* Gold gradient text */
+.text-gold-gradient {
+    background: linear-gradient(135deg, #D4AF37 0%, #F5EFCF 50%, #D4AF37 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Card hover effects */
+.card-hover {
+    transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 40px rgba(212, 175, 55, 0.1);
+}
+
+/* Gold border glow */
+.gold-glow {
+    box-shadow: 0 0 20px rgba(212, 175, 55, 0.2);
+}
+
+/* Status badges */
+.status-badge {
+    @apply px-2 py-1 rounded-full text-xs font-medium;
+}
+
+/* Table styles */
+.data-table {
+    @apply w-full text-sm text-left;
+}
+
+.data-table thead {
+    @apply text-xs uppercase bg-gray-50 dark:bg-gray-800;
+}
+
+.data-table th {
+    @apply px-4 py-3 font-semibold;
+}
+
+.data-table td {
+    @apply px-4 py-3;
+}
+
+.data-table tbody tr {
+    @apply border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800/50;
+}

@@ -1,15 +1,20 @@
 {
     "rewrites": [
         {
-            "source": "/api/(.*)",
-            "destination": "/api/$1"
+            "source": "/api/nocodb/:table*",
+            "destination": "/api/nocodb/:table*"
         },
         {
-            "source": "/(.*)",
+            "source": "/((?!api/).*)",
             "destination": "/index.html"
         }
     ],
     "buildCommand": "npm run build",
     "outputDirectory": "dist",
-    "installCommand": "npm install"
+    "installCommand": "npm install",
+    "functions": {
+        "api/**/*.ts": {
+            "runtime": "@vercel/node@5"
+        }
+    }
 }

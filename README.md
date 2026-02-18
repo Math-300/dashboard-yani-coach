@@ -1,20 +1,94 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Dashboard Yani Coach
 
-# Run and deploy your AI Studio app
+Dashboard de Business Intelligence para visualización de datos de ventas y coaching.
 
-This contains everything you need to run your app locally.
+## 🚀 Despliegue en Vercel
 
-View your app in AI Studio: https://ai.studio/apps/drive/1-fLqZR2IwSRG38EQNbATpiNVzY1DLVk9
+### Configuración de Variables de Entorno (IMPORTANTE)
 
-## Run Locally
+**La API NO funcionará hasta que configures las variables de entorno en Vercel.**
 
-**Prerequisites:**  Node.js
+Sigue estos pasos:
 
+1. Ve a [Vercel Dashboard](https://vercel.com/dashboard)
+2. Selecciona tu proyecto
+3. Ve a **Settings** → **Environment Variables**
+4. Agrega esta variable **OBLIGATORIA**:
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+| Variable | Valor | Descripción |
+|----------|-------|-------------|
+| `NOCODB_TOKEN` | Tu token de NocoDB | Token API de NocoDB (Settings → API Tokens) |
+
+5. Haz clic en **Save**
+6. Ve a **Deployments** → Clic en **Redeploy** en el último deploy
+
+### Variables Opcionales
+
+Estas variables ya tienen valores por defecto, solo cámbialas si es necesario:
+
+| Variable | Valor por defecto |
+|----------|-------------------|
+| `NOCODB_URL` | `https://app.nocodb.com` |
+| `TABLE_SELLERS` | `me6kwgo0qvg0aug` |
+| `TABLE_CONTACTS` | `mrwhtwissgz1xzr` |
+| `TABLE_INTERACTIONS` | `m6gx25reozjbbt3` |
+| `TABLE_SALES` | `mm9p02mlk0i5ysy` |
+| `TABLE_ATTEMPTS` | `mqdlglkwjvvtplc` |
+
+## 🔧 Desarrollo Local
+
+```bash
+# Instalar dependencias
+npm install
+
+# Iniciar servidor de desarrollo
+npm run dev
+
+# Construir para producción
+npm run build
+```
+
+## 📁 Estructura del Proyecto
+
+```
+├── api/
+│   └── nocodb/
+│       └── [...table].ts    # API Serverless de Vercel
+├── components/
+│   ├── BusinessView.tsx     # Vista de negocio
+│   ├── DateRangePicker.tsx  # Selector de fechas
+│   ├── KPICard.tsx          # Tarjetas de KPIs
+│   ├── RecoveryView.tsx     # Vista de recuperación
+│   └── TeamView.tsx         # Vista de equipo
+├── services/
+│   ├── dataService.ts       # Servicio de datos
+│   └── noco.ts              # Cliente de NocoDB
+├── vercel.json              # Configuración de Vercel
+└── vercel.env.example       # Ejemplo de variables de entorno
+```
+
+## 🐛 Solución de Problemas
+
+### Error: "Unexpected token '<', is not valid JSON"
+
+Este error significa que la API está devolviendo HTML en lugar de JSON. Causas:
+
+1. **Variables de entorno no configuradas** → Configura `NOCODB_TOKEN` en Vercel
+2. **Deploy desactualizado** → Haz Redeploy después de cambiar variables
+3. **Token inválido** → Verifica que el token de NocoDB sea correcto
+
+### Error: "Token API no configurado en el servidor"
+
+La variable `NOCODB_TOKEN` no está configurada en Vercel. Sigue los pasos de configuración arriba.
+
+### Error: "Error de NocoDB: 401"
+
+El token de NocoDB no es válido o expiró. Genera un nuevo token en NocoDB.
+
+### Error: "Error de NocoDB: 404"
+
+El ID de la tabla no es correcto. Verifica los IDs en `vercel.env.example`.
+
+## 📝 Licencia
+
+Privado - Solo para uso interno.

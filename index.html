@@ -3,79 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Coaching BI Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            animation: {
-              'fade-in-up': 'fadeInUp 0.5s ease-out',
-            },
-            keyframes: {
-              fadeInUp: {
-                '0%': { opacity: '0', transform: 'translateY(10px)' },
-                '100%': { opacity: '1', transform: 'translateY(0)' },
-              }
-            },
-            colors: {
-              gray: {
-                750: '#2d3748',
-                850: '#1a202c', 
-                950: '#0d1117',
-              },
-              gold: {
-                50: '#FBF8EB',
-                100: '#F5EFCF',
-                200: '#EAD99F',
-                300: '#DFC36F',
-                400: '#D4AF37', /* Base Metallic Gold */
-                500: '#B5952F',
-                600: '#967C27',
-                700: '#77621F',
-                800: '#584817',
-                900: '#392F0F',
-              }
-            }
-          }
-        }
-      }
-    </script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-      body { font-family: 'Inter', sans-serif; }
-      /* Custom scrollbar for better aesthetics */
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: transparent; 
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #D4AF37; 
-        border-radius: 4px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #B5952F; 
-      }
-    </style>
-  <script type="importmap">
-{
-  "imports": {
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "react": "https://esm.sh/react@^19.2.3",
-    "recharts": "https://esm.sh/recharts@^3.7.0"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
-</head>
+    <title>YaniCoach - Analytics Dashboard</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+  </head>
   <body>
     <div id="root"></div>
-  <script type="module" src="/index.tsx"></script>
-</body>
+    <script type="module" src="/index.tsx"></script>
+  </body>
 </html>

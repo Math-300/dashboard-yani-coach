@@ -86,22 +86,44 @@ const fetchFromProxy = async <T>(endpoint: string, label: string): Promise<T[]> 
   try {
     while (!isLastPage) {
       const url = `${apiUrl}?limit=${limit}&offset=${(page - 1) * limit}`;
+
+      console.log(`[API] Fetching ${label} from: ${url}`);
+
       const response = await fetch(url);
 
       if (!response.ok) {
-        console.error(`[API] Error ${response.status} obteniendo ${label}`);
+        const errorText = await response.text();
+        console.error(`[API] Error ${response.status} obteniendo ${label}: ${errorText.substring(0, 200)}`);
+
+        // Intentar parsear como JSON para obtener más detalles
+        try {
+          const errorJson = JSON.parse(errorText);
+          console.error(`[API] Detalles del error:`, errorJson);
+        } catch {
+          console.error(`[API] Respuesta no es JSON válido. Posible error de routing.`);
+        }
+        break;
+      }
+
+      // Verificar que la respuesta sea JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text();
+        console.error(`[API] Respuesta no es JSON. Content-Type: ${contentType}`);
+        console.error(`[API] Primeros 200 caracteres: ${textResponse.substring(0, 200)}`);
         break;
       }
 
       const json: ProxyResponse<T> = await response.json();
 
       if (page === 1 && json.list?.length > 0) {
-        console.log(`[API Debug] ${label}: ${json.list.length} registros`);
+        console.log(`[API] ${label}: ${json.list.length} registros recibidos`);
       }
 
       if (json.list && Array.isArray(json.list)) {
         allRecords = [...allRecords, ...json.list];
       } else {
+        console.warn(`[API] ${label}: Respuesta sin lista válida`);
         break;
       }
 
@@ -111,13 +133,18 @@ const fetchFromProxy = async <T>(endpoint: string, label: string): Promise<T[]> 
         page++;
       }
 
-      if (page > 10) break;
+      if (page > 10) {
+        console.warn(`[API] ${label}: Límite de 10 páginas alcanzado`);
+        break;
+      }
     }
 
+    console.log(`[API] ${label}: Total ${allRecords.length} registros obtenidos`);
     return allRecords;
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Error desconocido';
     console.error(`[API] Fallo crítico obteniendo ${label}: ${msg}`);
+    console.error(`[API] Stack:`, error instanceof Error ? error.stack : 'N/A');
     return [];
   }
 };
