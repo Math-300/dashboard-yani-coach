@@ -20,9 +20,11 @@ export const NOCODB_CONFIG = {
 };
 
 // Helper para saber si el proxy está configurado
-// En Vercel, siempre usamos el API routes interno
+// En producción de Vercel siempre está configurado
+// En desarrollo local, usamos datos demo
+const isDev = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+
 export const isApiConfigured = () => {
-  // En producción de Vercel siempre está configurado
-  // En desarrollo local, se usan datos demo si no hay configuración
-  return true;
+  if (isDev) return false; // En dev usamos datos demo
+  return true; // En producción usamos la API
 };
