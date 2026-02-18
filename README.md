@@ -53,7 +53,7 @@ npm run build
 ```
 ├── api/
 │   └── nocodb/
-│       └── [...table].ts    # API Serverless de Vercel
+│       └── [...table].ts    # API Serverless de Vercel (catch-all route)
 ├── components/
 │   ├── BusinessView.tsx     # Vista de negocio
 │   ├── DateRangePicker.tsx  # Selector de fechas
@@ -76,6 +76,26 @@ Este error significa que la API está devolviendo HTML en lugar de JSON. Causas:
 1. **Variables de entorno no configuradas** → Configura `NOCODB_TOKEN` en Vercel
 2. **Deploy desactualizado** → Haz Redeploy después de cambiar variables
 3. **Token inválido** → Verifica que el token de NocoDB sea correcto
+4. **Ruta de API incorrecta** → Verifica que el archivo `api/nocodb/[...table].ts` existe
+
+### Cómo verificar que la API funciona:
+
+1. Abre tu sitio en Vercel
+2. Abre la consola del navegador (F12 → Console)
+3. Deberías ver mensajes como:
+   ```
+   [API] Fetching Vendedoras from: https://tu-sitio.vercel.app/api/nocodb/sellers
+   [API] Vendedoras: X registros recibidos
+   ```
+
+### Cómo probar la API directamente:
+
+Abre estas URLs en tu navegador (reemplaza con tu dominio):
+- `https://tu-sitio.vercel.app/api/nocodb/sellers`
+- `https://tu-sitio.vercel.app/api/nocodb/contacts`
+- `https://tu-sitio.vercel.app/api/nocodb/sales`
+
+Si ves JSON, la API funciona. Si ves HTML, hay un problema de configuración.
 
 ### Error: "Token API no configurado en el servidor"
 
