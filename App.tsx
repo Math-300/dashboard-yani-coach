@@ -295,7 +295,7 @@ function DashboardShell() {
                 </button>
               </div>
               <div className="h-[calc(70vh-52px)] max-h-[668px]">
-                <ChatAssistant />
+                <ChatAssistant variant="dialog" />
               </div>
             </div>
           </div>
