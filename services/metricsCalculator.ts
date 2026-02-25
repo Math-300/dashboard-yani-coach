@@ -87,26 +87,19 @@ export const calculateNewLeadsToday = (
     contacts: Contact[],
     dateRange?: { start: Date; end: Date }
 ): number => {
-    // ✅ CORREGIDO: Si hay dateRange, los datos YA vienen filtrados del servidor
-    // Simplemente contar los contactos con estado "Nuevo"
-    if (dateRange) {
-        return contacts.filter(contact => contact.status === LeadStatus.NEW).length;
+    // ✅ Comparación por día en hora local para evitar discrepancias de timezone
+    const rangeStart = dateRange?.start ? new Date(dateRange.start) : new Date();
+    const rangeEnd = dateRange?.end ? new Date(dateRange.end) : new Date();
+
+    if (!dateRange) {
+        rangeStart.setHours(0, 0, 0, 0);
+        rangeEnd.setHours(23, 59, 59, 999);
     }
 
-    // Solo filtrar por fecha si NO hay dateRange (usar día de hoy por defecto)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const endOfToday = new Date(today);
-    endOfToday.setHours(23, 59, 59, 999);
-
     return contacts.filter(contact => {
-        // Verificar que el estado sea "Nuevo"
         if (contact.status !== LeadStatus.NEW) return false;
-
-        // Verificar que fue creado hoy
         const createdAt = new Date(contact.createdAt);
-        return createdAt >= today && createdAt <= endOfToday;
+        return createdAt >= rangeStart && createdAt <= rangeEnd;
     }).length;
 };
 

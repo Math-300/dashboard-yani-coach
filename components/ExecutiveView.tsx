@@ -19,7 +19,6 @@ import {
 
 interface ExecutiveViewProps {
     contacts: Contact[];
-    allContacts: Contact[]; // 🚀 NUEVO: Todos los contactos para embudo y pipeline
     sales: Sale[];
     dateRange: { start: Date; end: Date };
     isDarkMode: boolean;
@@ -33,7 +32,6 @@ interface ExecutiveViewProps {
  */
 const ExecutiveView: React.FC<ExecutiveViewProps> = ({
     contacts,
-    allContacts, // 🚀 NUEVO: Todos los contactos para embudo y pipeline
     sales,
     dateRange,
     isDarkMode
@@ -55,22 +53,22 @@ const ExecutiveView: React.FC<ExecutiveViewProps> = ({
     };
 
     // Calcular todas las métricas
-    // 🚀 FIX: Usar allContacts para embudo y pipeline (no filtrados por fecha)
+    // ✅ Usar contactos filtrados por fecha para que TODO respete el rango seleccionado
     const metrics = useMemo(() => {
-        // Leads en pipeline: usar todos los contactos (no filtrados)
-        const totalLeadsInPipeline = calculateTotalLeadsInPipeline(allContacts);
+        // Leads en pipeline: usar contactos filtrados
+        const totalLeadsInPipeline = calculateTotalLeadsInPipeline(contacts);
         // Leads nuevos hoy: usar contactos filtrados por fecha
         const newLeadsToday = calculateNewLeadsToday(contacts, dateRange);
         // Ventas del mes: usar sales filtradas
         const monthlySales = calculateMonthlySales(sales, dateRange);
-        // Tasa de conversión: calcular sobre todos los contactos
-        const conversionRate = calculateConversionRate(allContacts, dateRange);
-        // Seguimientos urgentes: usar todos los contactos
-        const urgentFollowUps = calculateUrgentFollowUps(allContacts);
-        // Valor del pipeline: usar todos los contactos
-        const pipelineValue = calculatePipelineValue(allContacts);
-        // Embudo: usar todos los contactos
-        const funnelData = calculateFunnelByStatus(allContacts);
+        // Tasa de conversión: calcular sobre contactos filtrados
+        const conversionRate = calculateConversionRate(contacts, dateRange);
+        // Seguimientos urgentes: usar contactos filtrados
+        const urgentFollowUps = calculateUrgentFollowUps(contacts);
+        // Valor del pipeline: usar contactos filtrados
+        const pipelineValue = calculatePipelineValue(contacts);
+        // Embudo: usar contactos filtrados
+        const funnelData = calculateFunnelByStatus(contacts);
 
         return {
             totalLeadsInPipeline,
@@ -81,7 +79,7 @@ const ExecutiveView: React.FC<ExecutiveViewProps> = ({
             pipelineValue,
             funnelData
         };
-    }, [contacts, allContacts, sales, dateRange]);
+    }, [contacts, sales, dateRange]);
 
     // Preparar datos para el gráfico de embudo con mínimo visible
     const chartData = useMemo(() => {

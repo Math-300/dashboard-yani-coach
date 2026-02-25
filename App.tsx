@@ -227,7 +227,6 @@ function DashboardShell() {
               {activeTab === 'executive' && (
                 <ExecutiveView
                   contacts={contacts}
-                  allContacts={allContacts}
                   sales={sales}
                   dateRange={dateRange}
                   isDarkMode={isDarkMode}

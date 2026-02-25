@@ -415,7 +415,7 @@ export const getRealContactsByStatus = async (statuses: string[]): Promise<Conta
     else if (s.includes('perdida') || s.includes('leads perdidos') || s.includes('no contactar') || s.includes('venta perdida')) status = LeadStatus.CLOSED_LOST;
     else if (s.includes('agendada') || s.includes('potencial venta')) status = LeadStatus.INTERESTED;
     else if (s.includes('seguimiento') || s.includes('contactar') || s.includes('nutrición') || s.includes('no se presentó')) status = LeadStatus.CONTACTED;
-    else if (s.includes('nuevo') && !s.includes('seguimiento')) status = LeadStatus.NEW;
+    else if (s.includes('lead nuevo') || (s.includes('nuevo') && !s.includes('seguimiento'))) status = LeadStatus.NEW;
     else status = LeadStatus.NEW;
 
     const rawReason = item['Motivo Venta Perdida'] || item.LostReason || item.Motivo || '';
@@ -535,7 +535,7 @@ export const getRealContacts = async (dateRange?: DateRange | null): Promise<Con
     else if (s.includes('perdida') || s.includes('leads perdidos') || s.includes('no contactar') || s.includes('venta perdida')) status = LeadStatus.CLOSED_LOST;
     else if (s.includes('agendada') || s.includes('potencial venta')) status = LeadStatus.INTERESTED;
     else if (s.includes('seguimiento') || s.includes('contactar') || s.includes('nutrición') || s.includes('no se presentó')) status = LeadStatus.CONTACTED;
-    else if (s.includes('nuevo') && !s.includes('seguimiento')) status = LeadStatus.NEW;
+    else if (s.includes('lead nuevo') || (s.includes('nuevo') && !s.includes('seguimiento'))) status = LeadStatus.NEW;
     else status = LeadStatus.NEW;
 
     const rawReason = item['Motivo Venta Perdida'] || item.LostReason || item.Motivo || '';

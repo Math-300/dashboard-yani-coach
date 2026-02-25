@@ -176,14 +176,22 @@ async function fetchAllData(dateRange?: DateRange | null): Promise<CachedData> {
     // - Nuevo (leads nuevos)
     // Esto reduce drásticamente la cantidad de datos a cargar vs. todos los contactos
     const funnelStatuses = [
+        // Estados reales en NocoDB (Contactos → Estado Actual)
+        'Lead Nuevo',
+        'En Seguimiento 24 hs después primer contacto',
+        'En Seguimiento 7 días',
+        'Llamada Agendada',
+        'Seguimiento Cliente Nuevo',
+        'Seguimiento venta perdida',
+        'Seguimiento leads sin respuesta',
+        'Seguimiento Potencial venta',
+        'Contactar en 48 horas',
+        'Nutrición a Largo Plazo',
+        'No se presentó',
         'Venta Ganada',
         'Venta Perdida',
-        'Leads Perdidos',
-        'Potencial Venta Agendada',
-        'En Seguimiento',
-        'Contactar',
-        'Nutrición',
-        'Nuevo'
+        'Leads perdidos (que nunca contestaron)',
+        'no contactar'
     ];
 
     let allContacts: Contact[] = contacts; // Por defecto usar contactos filtrados
