@@ -1,105 +1,158 @@
 # Dashboard Yani Coach
 
-Dashboard de Business Intelligence para visualización de datos de ventas y coaching.
+Dashboard de ventas y métricas para Yani Coach. Conecta con NocoDB como backend y muestra KPIs de ventas, pipeline, desempeño de vendedoras y más.
 
-## 🚀 Despliegue en Vercel
+## Stack Tecnológico
 
-### Configuración de Variables de Entorno (IMPORTANTE)
+- **Frontend**: React 19 + TypeScript + Vite
+- **Estilos**: Tailwind CSS v4 + tema personalizado gold
+- **Gráficos**: @antv/g2 (importación dinámica)
+- **Backend**: NocoDB (API REST)
+- **Deployment**: Vercel (serverless functions)
 
-**La API NO funcionará hasta que configures las variables de entorno en Vercel.**
+## Estructura del Proyecto
 
-Sigue estos pasos:
+```
+├── components/           # Vistas del dashboard (7 vistas)
+│   ├── ExecutiveView.tsx    # Resumen ejecutivo con KPIs principales
+│   ├── SalesView.tsx        # Ventas e ingresos
+│   ├── PerformanceView.tsx  # Desempeño de vendedoras
+│   ├── PipelineView.tsx     # Pipeline y actividad
+│   ├── BusinessView.tsx     # Visión general
+│   ├── TeamView.tsx         # Equipo
+│   └── RecoveryView.tsx     # Calidad y recuperación
+├── services/             # Servicios de datos y cálculo de métricas
+│   ├── noco.ts              # Conexión a NocoDB, normalización de datos
+│   ├── metricsCalculator.ts # Cálculo de KPIs y métricas
+│   └── dataService.ts       # Servicio de datos con fallback a demo
+├── hooks/                # Custom hooks
+│   └── useG2Chart.ts        # Hook para gráficos G2 con cleanup automático
+├── api/                  # API serverless para Vercel
+│   └── nocodb/[...table].ts # Proxy serverless para NocoDB
+└── docs/                 # Documentación técnica
+    └── SOLUCION_COLORES_GOLD.md
+```
 
-1. Ve a [Vercel Dashboard](https://vercel.com/dashboard)
-2. Selecciona tu proyecto
-3. Ve a **Settings** → **Environment Variables**
-4. Agrega esta variable **OBLIGATORIA**:
+## Configuración de Entorno
 
-| Variable | Valor | Descripción |
-|----------|-------|-------------|
-| `NOCODB_TOKEN` | Tu token de NocoDB | Token API de NocoDB (Settings → API Tokens) |
+### Desarrollo Local
 
-5. Haz clic en **Save**
-6. Ve a **Deployments** → Clic en **Redeploy** en el último deploy
+1. Crea un archivo `.env.local` en la raíz del proyecto:
 
-### Variables Opcionales
+```env
+VITE_NOCODB_URL=https://app.nocodb.com
+VITE_NOCODB_TOKEN=tu_token_aqui
+VITE_TABLE_SELLERS=me6kwgo0qvg0aug
+VITE_TABLE_CONTACTS=mrwhtwissgz1xzr
+VITE_TABLE_INTERACTIONS=m6gx25reozjbbt3
+VITE_TABLE_SALES=mm9p02mlk0i5ysy
+VITE_TABLE_ATTEMPTS=mqdlglkwjvvtplc
 
-Estas variables ya tienen valores por defecto, solo cámbialas si es necesario:
+# Auth serverless (server-only)
+AUTH_SECRET=
+AUTH_PASSWORD=
 
-| Variable | Valor por defecto |
-|----------|-------------------|
-| `NOCODB_URL` | `https://app.nocodb.com` |
-| `TABLE_SELLERS` | `me6kwgo0qvg0aug` |
-| `TABLE_CONTACTS` | `mrwhtwissgz1xzr` |
-| `TABLE_INTERACTIONS` | `m6gx25reozjbbt3` |
-| `TABLE_SALES` | `mm9p02mlk0i5ysy` |
-| `TABLE_ATTEMPTS` | `mqdlglkwjvvtplc` |
+# OpenAI chat (server-only)
+OPENAI_API_KEY=
+OPENAI_BASE_URL=https://api.openai.com/v1
+OPENAI_MODEL=gpt-4.1-mini
+```
 
-## 🔧 Desarrollo Local
+> **Nota**: Las variables `AUTH_*` y `OPENAI_*` son server-only y no llevan el prefijo `VITE_`.
+
+2. Instala las dependencias:
 
 ```bash
-# Instalar dependencias
 npm install
+```
 
-# Iniciar servidor de desarrollo
+### Vercel (Producción)
+
+Configura las variables de entorno en Vercel Dashboard → Settings → Environment Variables:
+
+| Variable | Descripción |
+|----------|-------------|
+| `NOCODB_TOKEN` | Token API de NocoDB (obligatorio) |
+| `NOCODB_URL` | URL de NocoDB (por defecto: https://app.nocodb.com) |
+| `TABLE_SELLERS` | ID de tabla Vendedoras |
+| `TABLE_CONTACTS` | ID de tabla Contactos |
+| `TABLE_INTERACTIONS` | ID de tabla Interacciones |
+| `TABLE_SALES` | ID de tabla Ventas |
+| `TABLE_ATTEMPTS` | ID de tabla Intentos |
+| `AUTH_SECRET` | Clave secreta para firmar cookies (mín. 32 caracteres) |
+| `AUTH_PASSWORD` | Contraseña maestra del dashboard |
+| `OPENAI_API_KEY` | API key de OpenAI (server-only) |
+| `OPENAI_BASE_URL` | Endpoint base de OpenAI (default https://api.openai.com/v1) |
+| `OPENAI_MODEL` | Modelo de OpenAI (default gpt-4.1-mini) |
+
+> **Nota**: En Vercel las variables no llevan el prefijo `VITE_`.
+> **Nota**: Tras cambiar variables en Vercel, ejecuta un **Redeploy**.
+
+**Checklist rápido**
+- `/login` valida `AUTH_PASSWORD` y crea sesión firmada con `AUTH_SECRET`.
+- `/api/chat` responde usando `OPENAI_API_KEY` y `OPENAI_MODEL`.
+
+Referencia: revisa [`.env.example`](.env.example:1) y [`vercel.env.example`](vercel.env.example:1) para el listado completo.
+
+## Autenticación `/login`
+
+El acceso al dashboard es solo para uso interno y requiere una contraseña maestra.
+
+**Flujo de login**
+1. Abre `/login`.
+2. Ingresa `AUTH_PASSWORD`.
+3. Se crea una sesión firmada con `AUTH_SECRET` y se redirige al dashboard.
+
+**Notas**
+- Si `AUTH_SECRET` o `AUTH_PASSWORD` no están configuradas, el login falla.
+- Para cerrar sesión: `POST /api/auth/logout`.
+- Para verificar sesión activa: `GET /api/auth/session`.
+- En desarrollo local, configura `.env.local` y reinicia `npm run dev`.
+
+## Asistente Yani
+
+Asistente de chat interno dentro del dashboard (no público).
+
+**Uso**
+- Endpoint: `POST /api/chat`.
+- Requiere `OPENAI_API_KEY` y `OPENAI_MODEL`.
+- Si faltan variables `OPENAI_*`, el chat no responde.
+- `OPENAI_MODEL` permite controlar el modelo usado.
+
+## Scripts Disponibles
+
+```bash
+# Desarrollo
 npm run dev
 
 # Construir para producción
 npm run build
+
+# Vista previa de producción
+npm run preview
 ```
 
-## 📁 Estructura del Proyecto
+## Deployment
 
-```
-├── api/
-│   └── nocodb/
-│       └── [...table].ts    # API Serverless de Vercel (catch-all route)
-├── components/
-│   ├── BusinessView.tsx     # Vista de negocio
-│   ├── DateRangePicker.tsx  # Selector de fechas
-│   ├── KPICard.tsx          # Tarjetas de KPIs
-│   ├── RecoveryView.tsx     # Vista de recuperación
-│   └── TeamView.tsx         # Vista de equipo
-├── services/
-│   ├── dataService.ts       # Servicio de datos
-│   └── noco.ts              # Cliente de NocoDB
-├── vercel.json              # Configuración de Vercel
-└── vercel.env.example       # Ejemplo de variables de entorno
-```
+El proyecto está configurado para desplegarse automáticamente en Vercel.
 
-## 🐛 Solución de Problemas
+1. Conecta tu repositorio a Vercel
+2. Configura las variables de entorno (ver sección anterior)
+3. Haz push a la rama principal
+
+## Solución de Problemas
 
 ### Error: "Unexpected token '<', is not valid JSON"
 
-Este error significa que la API está devolviendo HTML en lugar de JSON. Causas:
+La API está devolviendo HTML en lugar de JSON. Causas comunes:
 
 1. **Variables de entorno no configuradas** → Configura `NOCODB_TOKEN` en Vercel
 2. **Deploy desactualizado** → Haz Redeploy después de cambiar variables
 3. **Token inválido** → Verifica que el token de NocoDB sea correcto
-4. **Ruta de API incorrecta** → Verifica que el archivo `api/nocodb/[...table].ts` existe
-
-### Cómo verificar que la API funciona:
-
-1. Abre tu sitio en Vercel
-2. Abre la consola del navegador (F12 → Console)
-3. Deberías ver mensajes como:
-   ```
-   [API] Fetching Vendedoras from: https://tu-sitio.vercel.app/api/nocodb/sellers
-   [API] Vendedoras: X registros recibidos
-   ```
-
-### Cómo probar la API directamente:
-
-Abre estas URLs en tu navegador (reemplaza con tu dominio):
-- `https://tu-sitio.vercel.app/api/nocodb/sellers`
-- `https://tu-sitio.vercel.app/api/nocodb/contacts`
-- `https://tu-sitio.vercel.app/api/nocodb/sales`
-
-Si ves JSON, la API funciona. Si ves HTML, hay un problema de configuración.
 
 ### Error: "Token API no configurado en el servidor"
 
-La variable `NOCODB_TOKEN` no está configurada en Vercel. Sigue los pasos de configuración arriba.
+La variable `NOCODB_TOKEN` no está configurada en Vercel.
 
 ### Error: "Error de NocoDB: 401"
 
@@ -107,8 +160,8 @@ El token de NocoDB no es válido o expiró. Genera un nuevo token en NocoDB.
 
 ### Error: "Error de NocoDB: 404"
 
-El ID de la tabla no es correcto. Verifica los IDs en `vercel.env.example`.
+El ID de la tabla no es correcto. Verifica los IDs en tu configuración.
 
-## 📝 Licencia
+## Licencia
 
 Privado - Solo para uso interno.

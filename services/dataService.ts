@@ -1,15 +1,102 @@
-import { 
-  Seller, Contact, Interaction, Sale, PurchaseAttempt, 
-  LeadStatus, InteractionType, LostReason, PurchaseAttemptStatus 
+import {
+  Seller, Contact, Interaction, Sale, PurchaseAttempt,
+  LeadStatus, InteractionType, LostReason, PurchaseAttemptStatus
 } from '../types';
-import { 
-  getRealSellers, 
-  getRealSales, 
-  getRealContacts, 
-  getRealInteractions, 
-  getRealAttempts 
+import {
+  getRealSellers,
+  getRealSales,
+  getRealContacts,
+  getRealInteractions,
+  getRealAttempts
 } from './noco';
-import { isApiConfigured } from '../config';
+import { isApiConfigured, NOCODB_CONFIG } from '../config';
+
+// --- UTILIDADES PARA CARGA OPTIMIZADA ---
+
+/**
+ * Delay en milisegundos
+ */
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Ejecuta una función con reintentos y backoff exponencial
+ */
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  baseDelay: number = 500
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+
+      const isRetryable = error?.message?.includes('429') ||
+        error?.message?.includes('Too Many Requests') ||
+        error?.message?.includes('500') ||
+        error?.message?.includes('502') ||
+        error?.message?.includes('503');
+
+      if (!isRetryable || attempt === maxRetries) {
+        throw error;
+      }
+
+      const waitTime = baseDelay * Math.pow(2, attempt);
+      if (NOCODB_CONFIG.DEBUG) {
+        console.log(`[Retry] Intento ${attempt + 1}/${maxRetries} falló. Esperando ${waitTime}ms...`);
+      }
+
+      await delay(waitTime);
+    }
+  }
+
+  throw lastError;
+}
+
+/**
+ * Carga datos de forma secuencial con delays entre peticiones
+ */
+async function loadDataSequentially(): Promise<{
+  sellers: Seller[];
+  contacts: Contact[];
+  interactions: Interaction[];
+  sales: Sale[];
+  attempts: PurchaseAttempt[];
+}> {
+  const DELAY_BETWEEN_REQUESTS = 200;
+
+  if (NOCODB_CONFIG.DEBUG) {
+    console.log('[DataLoader] Iniciando carga secuencial de datos...');
+  }
+
+  const sellers = await withRetry(() => getRealSellers());
+  if (NOCODB_CONFIG.DEBUG) console.log(`[DataLoader] ✓ Sellers: ${sellers.length}`);
+  await delay(DELAY_BETWEEN_REQUESTS);
+
+  const sales = await withRetry(() => getRealSales());
+  if (NOCODB_CONFIG.DEBUG) console.log(`[DataLoader] ✓ Ventas: ${sales.length}`);
+  await delay(DELAY_BETWEEN_REQUESTS);
+
+  const contacts = await withRetry(() => getRealContacts());
+  if (NOCODB_CONFIG.DEBUG) console.log(`[DataLoader] ✓ Contactos: ${contacts.length}`);
+  await delay(DELAY_BETWEEN_REQUESTS);
+
+  const interactions = await withRetry(() => getRealInteractions());
+  if (NOCODB_CONFIG.DEBUG) console.log(`[DataLoader] ✓ Interacciones: ${interactions.length}`);
+  await delay(DELAY_BETWEEN_REQUESTS);
+
+  const attempts = await withRetry(() => getRealAttempts());
+  if (NOCODB_CONFIG.DEBUG) console.log(`[DataLoader] ✓ Intentos: ${attempts.length}`);
+
+  if (NOCODB_CONFIG.DEBUG) {
+    console.log('[DataLoader] ✅ Carga secuencial completada');
+  }
+
+  return { sellers, contacts, interactions, sales, attempts };
+}
 
 // --- MOCK DATA GENERATOR ---
 // Se usa si NO hay configuración de API detectada.
@@ -35,10 +122,10 @@ const generateMockData = () => {
     const isWin = Math.random() > 0.7;
     const isLost = !isWin && Math.random() > 0.5;
     const seller = MOCK_SELLERS[Math.floor(Math.random() * MOCK_SELLERS.length)];
-    const daysAgoCreated = Math.floor(Math.random() * 60); 
+    const daysAgoCreated = Math.floor(Math.random() * 60);
 
     const contactId = `c-${i}`;
-    
+
     contacts.push({
       id: contactId,
       name: `Lead Demo ${i + 1}`,
@@ -108,7 +195,7 @@ export const getDashboardData = async (startDate: Date, endDate: Date) => {
     const mockData = generateMockData();
     return {
       sellers: mockData.sellers,
-      contacts: mockData.contacts, 
+      contacts: mockData.contacts,
       interactions: mockData.interactions.filter(i => isWithinRange(i.date)),
       sales: mockData.sales.filter(s => isWithinRange(s.date)),
       attempts: mockData.attempts.filter(a => isWithinRange(a.date)),
@@ -117,20 +204,24 @@ export const getDashboardData = async (startDate: Date, endDate: Date) => {
   }
 
   try {
-    const [realSellers, realContacts, realInteractions, realSales, realAttempts] = await Promise.all([
-      getRealSellers(),
-      getRealContacts(),
-      getRealInteractions(),
-      getRealSales(),
-      getRealAttempts()
-    ]);
+    // ✅ OPTIMIZADO: Carga secuencial con delays para evitar rate limiting (429)
+    // Antes: Promise.all() con 5 peticiones simultáneas → Error 429
+    // Ahora: Carga secuencial con 200ms entre peticiones → Sin errores
+    const startTime = performance.now();
+
+    const { sellers, contacts, interactions, sales, attempts } = await loadDataSequentially();
+
+    const loadTime = Math.round(performance.now() - startTime);
+    if (NOCODB_CONFIG.DEBUG) {
+      console.log(`[DataLoader] Tiempo total de carga: ${loadTime}ms`);
+    }
 
     return {
-      sellers: realSellers,
-      contacts: realContacts,
-      interactions: realInteractions.filter(i => isWithinRange(i.date)),
-      sales: realSales.filter(s => isWithinRange(s.date)),
-      attempts: realAttempts.filter(a => isWithinRange(a.date)),
+      sellers,
+      contacts,
+      interactions: interactions.filter(i => isWithinRange(i.date)),
+      sales: sales.filter(s => isWithinRange(s.date)),
+      attempts: attempts.filter(a => isWithinRange(a.date)),
       isDemo: false
     };
 

@@ -3,6 +3,59 @@
 // Ruta: /api/nocodb/{sellers|contacts|interactions|sales|attempts}
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
+import crypto from 'crypto';
+
+const COOKIE_NAME = 'yd_auth';
+const getSecret = () => process.env.AUTH_SECRET || '';
+
+const base64Url = (input: Buffer | string) => {
+    const buffer = typeof input === 'string' ? Buffer.from(input) : input;
+    return buffer
+        .toString('base64')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/g, '');
+};
+
+const sign = (payload: string, secret: string) => {
+    const hmac = crypto.createHmac('sha256', secret);
+    hmac.update(payload);
+    return base64Url(hmac.digest());
+};
+
+const parseCookies = (cookieHeader?: string) => {
+    const cookies: Record<string, string> = {};
+    if (!cookieHeader) return cookies;
+    cookieHeader.split(';').forEach((part) => {
+        const [name, ...rest] = part.trim().split('=');
+        cookies[name] = rest.join('=');
+    });
+    return cookies;
+};
+
+const verifyToken = (token: string, secret: string) => {
+    const [payloadEncoded, signature] = token.split('.');
+    if (!payloadEncoded || !signature) return null;
+    const expected = sign(payloadEncoded, secret);
+    if (signature !== expected) return null;
+    try {
+        const json = Buffer.from(payloadEncoded.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString();
+        return JSON.parse(json);
+    } catch {
+        return null;
+    }
+};
+
+const isAuthenticated = (request: VercelRequest) => {
+    const secret = getSecret();
+    if (!secret) return false;
+
+    const cookies = parseCookies(request.headers.cookie);
+    const token = cookies[COOKIE_NAME];
+    if (!token) return false;
+
+    return !!verifyToken(token, secret);
+};
 
 // Configuración desde variables de entorno de Vercel
 const NOCODB_URL = process.env.NOCODB_URL || 'https://app.nocodb.com';
@@ -41,7 +94,20 @@ export default async function handler(
     // En Vercel, los parámetros de ruta catch-all están en query
     // La ruta /api/nocodb/sellers se mapea a table = ['sellers']
     const tableParam = request.query.table;
-    const tableName = Array.isArray(tableParam) ? tableParam[0] : tableParam;
+    let tableName = Array.isArray(tableParam) ? tableParam[0] : tableParam;
+
+    // Fallback robusto: extraer desde la URL cuando query.table llega vacío
+    if (!tableName && request.url) {
+        try {
+            const url = new URL(request.url, `http://${request.headers.host || 'localhost'}`);
+            const match = url.pathname.match(/\/api\/nocodb\/([^/]+)/i);
+            if (match && match[1]) {
+                tableName = match[1];
+            }
+        } catch (error) {
+            console.warn('[API] No se pudo parsear la URL para tableName');
+        }
+    }
 
     if (!tableName) {
         return response.status(400).json({
@@ -49,6 +115,10 @@ export default async function handler(
             usage: '/api/nocodb/{sellers|contacts|interactions|sales|attempts}',
             availableTables: Object.keys(TABLES)
         });
+    }
+
+    if (!isAuthenticated(request)) {
+        return response.status(401).json({ error: 'No autorizado' });
     }
 
     const tableId = TABLES[tableName];
@@ -74,12 +144,22 @@ export default async function handler(
         const limit = request.query.limit || 1000;
         const offset = request.query.offset || 0;
         const fields = request.query.fields;
+        const where = request.query.where;
+        const sort = request.query.sort;
 
         let url = `${NOCODB_URL}/api/v2/tables/${tableId}/records?limit=${limit}&offset=${offset}`;
 
         // Agregar campos específicos si se solicitan
         if (fields) {
             url += `&fields=${fields}`;
+        }
+
+        if (where) {
+            url += `&where=${where}`;
+        }
+
+        if (sort) {
+            url += `&sort=${sort}`;
         }
 
         console.log(`[API] Fetching ${tableName} from NocoDB...`);

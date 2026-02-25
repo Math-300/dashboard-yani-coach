@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer 
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import { Seller, Interaction, Sale, Contact, InteractionType, LeadStatus } from '../types';
+import { isDateInRange } from '../services/noco';
 
 interface TeamViewProps {
   sellers: Seller[];
@@ -19,18 +20,18 @@ const AvatarWithFallback: React.FC<{ name: string; url?: string }> = ({ name, ur
 
   if (url && !imgError) {
     return (
-      <img 
-        src={url} 
-        alt={name} 
+      <img
+        src={url}
+        alt={name}
         onError={() => setImgError(true)}
-        className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-600 border border-gray-200 dark:border-gray-600 object-cover" 
+        className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-600 border border-gray-200 dark:border-gray-600 object-cover"
       />
     );
   }
 
   return (
     <div className="w-9 h-9 rounded-full bg-gold-100 dark:bg-gold-900/30 border border-gold-200 dark:border-gold-700 flex items-center justify-center text-gold-700 dark:text-gold-400 text-xs font-bold">
-      {name.substring(0,2).toUpperCase()}
+      {name.substring(0, 2).toUpperCase()}
     </div>
   );
 };
@@ -38,65 +39,83 @@ const AvatarWithFallback: React.FC<{ name: string; url?: string }> = ({ name, ur
 const TeamView: React.FC<TeamViewProps> = ({ sellers, interactions, sales, contacts, dateRange, isDarkMode = false }) => {
 
   // Chart Colors based on theme
-  const axisColor = isDarkMode ? '#9ca3af' : '#4b5563'; 
-  const gridColor = isDarkMode ? '#374151' : '#e5e7eb'; 
-  const tooltipBg = isDarkMode ? '#111827' : '#ffffff'; 
-  const tooltipText = isDarkMode ? '#f3f4f6' : '#111827'; 
-  const tooltipBorder = isDarkMode ? '#D4AF37' : '#e5e7eb'; 
+  const axisColor = isDarkMode ? '#9ca3af' : '#4b5563';
+  const gridColor = isDarkMode ? '#374151' : '#e5e7eb';
+  const tooltipBg = isDarkMode ? '#111827' : '#ffffff';
+  const tooltipText = isDarkMode ? '#f3f4f6' : '#111827';
+  const tooltipBorder = isDarkMode ? '#D4AF37' : '#e5e7eb';
 
-  // Helper to filter dates
+  // Helper to filter dates - ✅ CORREGIDO: Usar comparación con zona horaria
   const isWithinRange = (dateString: string) => {
-    const time = new Date(dateString).getTime();
-    return time >= dateRange.start.getTime() && time <= dateRange.end.getTime();
+    return isDateInRange(dateString, dateRange.start, dateRange.end);
   };
 
   // 1. Leaderboard Calculation
   const leaderboard = sellers.map(seller => {
     // Basic Counts
-    const newLeadsAssignedInPeriod = contacts.filter(c => 
+    const newLeadsAssignedInPeriod = contacts.filter(c =>
       c.assignedSellerId === seller.id && isWithinRange(c.createdAt)
     );
-    
+
     const leadsAssignedTotal = contacts.filter(c => c.assignedSellerId === seller.id).length;
     const interactionsCount = interactions.filter(i => i.sellerId === seller.id).length;
-    
+
     // Sales filtered by seller (already date filtered in service if passed that way, but here we receive all sales in period)
     const closedSales = sales.filter(s => s.sellerId === seller.id);
     const revenue = closedSales.reduce((sum, s) => sum + s.amount, 0);
-    
-    // Close Rate: Sales (This Period) / New Leads (This Period)
-    const closeRate = newLeadsAssignedInPeriod.length > 0 
-      ? (closedSales.length / newLeadsAssignedInPeriod.length) * 100 
+
+    // ✅ CORREGIDO: Close Rate basado en leads con resolución, no en leads nuevos
+    // Fórmula: Ventas Ganadas / (Ventas Ganadas + Ventas Perdidas) × 100
+    const sellerContacts = contacts.filter(c => c.assignedSellerId === seller.id);
+    const sellerWonLeads = sellerContacts.filter(c => c.status === LeadStatus.CLOSED_WON).length;
+    const sellerLostLeads = sellerContacts.filter(c => c.status === LeadStatus.CLOSED_LOST).length;
+    const sellerResolvedLeads = sellerWonLeads + sellerLostLeads;
+
+    const closeRate = sellerResolvedLeads > 0
+      ? (sellerWonLeads / sellerResolvedLeads) * 100
       : 0;
 
     // Efficiency Metric: Touches per Sale
     let touchesForClosedDeals = 0;
     closedSales.forEach(sale => {
-      const saleDate = new Date(sale.date).getTime();
-      const touches = interactions.filter(i => 
-        i.contactId === sale.contactId && new Date(i.date).getTime() <= saleDate
-      ).length;
-      touchesForClosedDeals += touches;
+      // Usar snapshot si está disponible
+      if (sale.interactionCountSnapshot !== undefined && sale.interactionCountSnapshot !== null) {
+        touchesForClosedDeals += sale.interactionCountSnapshot;
+      } else {
+        const saleDate = new Date(sale.date).getTime();
+        const touches = interactions.filter(i =>
+          i.contactId === sale.contactId && new Date(i.date).getTime() <= saleDate
+        ).length;
+        touchesForClosedDeals += touches;
+      }
     });
     const avgTouchesPerSale = closedSales.length > 0 ? (touchesForClosedDeals / closedSales.length).toFixed(1) : '0';
 
-    // Velocity Metric: Sales Cycle (Days)
+    // ✅ CORREGIDO: Velocity Metric - Usar Sales_Cycle_Days de NocoDB si está disponible
     let totalCycleDays = 0;
+    let cycleCount = 0;
     closedSales.forEach(sale => {
-      const contact = contacts.find(c => c.id === sale.contactId);
-      if (contact) {
-        const created = new Date(contact.createdAt).getTime();
-        const sold = new Date(sale.date).getTime();
-        const diff = Math.max(0, Math.ceil((sold - created) / (1000 * 60 * 60 * 24)));
-        totalCycleDays += diff;
+      if (sale.salesCycleDays !== undefined && sale.salesCycleDays !== null) {
+        totalCycleDays += sale.salesCycleDays;
+        cycleCount++;
+      } else {
+        // Fallback: calcular manualmente
+        const contact = contacts.find(c => c.id === sale.contactId);
+        if (contact) {
+          const created = new Date(contact.createdAt).getTime();
+          const sold = new Date(sale.date).getTime();
+          const diff = Math.max(0, Math.ceil((sold - created) / (1000 * 60 * 60 * 24)));
+          totalCycleDays += diff;
+          cycleCount++;
+        }
       }
     });
-    const avgSalesCycle = closedSales.length > 0 ? parseFloat((totalCycleDays / closedSales.length).toFixed(1)) : 0;
+    const avgSalesCycle = cycleCount > 0 ? parseFloat((totalCycleDays / cycleCount).toFixed(1)) : 0;
 
     // Hygiene Metric: Average Age of Active Leads
-    const activeLeads = contacts.filter(c => 
-      c.assignedSellerId === seller.id && 
-      c.status !== LeadStatus.CLOSED_WON && 
+    const activeLeads = contacts.filter(c =>
+      c.assignedSellerId === seller.id &&
+      c.status !== LeadStatus.CLOSED_WON &&
       c.status !== LeadStatus.CLOSED_LOST
     );
     let totalAgeDays = 0;
@@ -153,7 +172,7 @@ const TeamView: React.FC<TeamViewProps> = ({ sellers, interactions, sales, conta
 
   return (
     <div className="space-y-8">
-      
+
       {/* Leaderboard Table */}
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-colors duration-300">
         <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
@@ -164,13 +183,13 @@ const TeamView: React.FC<TeamViewProps> = ({ sellers, interactions, sales, conta
             <thead className="bg-gray-50 dark:bg-gray-750 text-gray-900 dark:text-gray-100 font-medium border-b border-gray-100 dark:border-gray-700">
               <tr>
                 <th className="px-6 py-4">Asesora</th>
-                <th className="px-6 py-4 text-center">Leads (Nuevos)</th>
-                <th className="px-6 py-4 text-center" title="Promedio de días para cerrar una venta">Ciclo Venta</th>
-                <th className="px-6 py-4 text-center" title="Antigüedad promedio de leads activos">Antigüedad Activa</th>
-                <th className="px-6 py-4 text-center" title="Interacciones promedio para cerrar">Toques/Cierre</th>
-                <th className="px-6 py-4 text-center">Ventas</th>
-                <th className="px-6 py-4 text-center">% Cierre</th>
-                <th className="px-6 py-4 text-right">Facturación</th>
+                <th className="px-6 py-4 text-center" title="Leads nuevos asignados en el período seleccionado">Leads (Nuevos)</th>
+                <th className="px-6 py-4 text-center" title="Días promedio desde que un lead entra hasta que compra">Ciclo Venta</th>
+                <th className="px-6 py-4 text-center" title="Antigüedad promedio de los leads que aún no se cierran">Antigüedad Activa</th>
+                <th className="px-6 py-4 text-center" title="Número promedio de interacciones para cerrar una venta">Toques/Cierre</th>
+                <th className="px-6 py-4 text-center" title="Ventas cerradas en el período">Ventas</th>
+                <th className="px-6 py-4 text-center" title="Porcentaje de cierre: Ganados ÷ (Ganados + Perdidos)">% Cierre</th>
+                <th className="px-6 py-4 text-right" title="Ingresos totales generados por esta asesora">Facturación</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -188,9 +207,9 @@ const TeamView: React.FC<TeamViewProps> = ({ sellers, interactions, sales, conta
                     <span className="text-xs text-gray-500 block">de {row.totalLeads} total</span>
                   </td>
                   <td className="px-6 py-4 text-center">
-                     <span className={`${getCycleColor(row.avgSalesCycle)} bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-xs`}>
+                    <span className={`${getCycleColor(row.avgSalesCycle)} bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-xs`}>
                       {row.avgSalesCycle > 0 ? `${row.avgSalesCycle} d` : '-'}
-                     </span>
+                    </span>
                   </td>
                   <td className="px-6 py-4 text-center">
                     <span className={`${getAgeColor(row.avgLeadAge)} bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded text-xs`}>
@@ -204,16 +223,15 @@ const TeamView: React.FC<TeamViewProps> = ({ sellers, interactions, sales, conta
                   </td>
                   <td className="px-6 py-4 text-center font-bold text-gray-800 dark:text-white">{row.salesCount}</td>
                   <td className="px-6 py-4 text-center">
-                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                      row.closeRate > 10 
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' 
-                        : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                    }`}>
+                    <span className={`px-2 py-1 rounded-full text-xs font-semibold ${row.closeRate > 10
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                      : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                      }`}>
                       {row.closeRate.toFixed(1)}%
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right font-bold text-gold-600 dark:text-gold-400">
-                     {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(row.revenue)}
+                    {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(row.revenue)}
                   </td>
                 </tr>
               ))}
@@ -233,17 +251,17 @@ const TeamView: React.FC<TeamViewProps> = ({ sellers, interactions, sales, conta
                 margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor} />
-                <XAxis dataKey="name" tick={{fill: axisColor}} stroke={axisColor} />
-                <YAxis tick={{fill: axisColor}} stroke={axisColor} />
-                <Tooltip 
-                  cursor={{fill: isDarkMode ? 'rgba(212, 175, 55, 0.1)' : 'rgba(0,0,0,0.05)'}}
+                <XAxis dataKey="name" tick={{ fill: axisColor }} stroke={axisColor} />
+                <YAxis tick={{ fill: axisColor }} stroke={axisColor} />
+                <Tooltip
+                  cursor={{ fill: isDarkMode ? 'rgba(212, 175, 55, 0.1)' : 'rgba(0,0,0,0.05)' }}
                   contentStyle={{ backgroundColor: tooltipBg, borderColor: tooltipBorder, color: tooltipText }}
                   itemStyle={{ color: tooltipText }}
                 />
                 <Legend formatter={(value) => <span style={{ color: axisColor }}>{value}</span>} />
-                <Bar dataKey={InteractionType.CALL} stackId="a" fill="#D4AF37" name="Llamada" /> 
-                <Bar dataKey={InteractionType.WHATSAPP} stackId="a" fill="#10b981" name="WhatsApp" /> 
-                <Bar dataKey={InteractionType.EMAIL} stackId="a" fill="#9ca3af" name="Email" /> 
+                <Bar dataKey={InteractionType.CALL} stackId="a" fill="#D4AF37" name="Llamada" />
+                <Bar dataKey={InteractionType.WHATSAPP} stackId="a" fill="#10b981" name="WhatsApp" />
+                <Bar dataKey={InteractionType.EMAIL} stackId="a" fill="#9ca3af" name="Email" />
               </BarChart>
             </ResponsiveContainer>
           </div>

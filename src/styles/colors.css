@@ -1,0 +1,283 @@
+/**
+ * Gold Color Utilities with Opacity - Tailwind v4 Compatible
+ * 
+ * SOLUCIÓN DEFINITIVA para el bug de Tailwind v4 JIT donde las clases
+ * bg-gold-*/
+opacidad no se generan correctamente. * * Usamos @utility de Tailwind v4 con color-mix() para crear utilidades * de colores con opacidad predefinida. * * Documentación: * - https: //tailwindcss.com/docs/v4-beta#custom-utilities
+* - https: //developer.mozilla.org/en-US/docs/Web/CSS/color_value/color-mix
+*/
+/* ============================================
+   BACKGROUND GOLD WITH OPACITY
+   ============================================ */
+
+/* bg-gold-400 with opacity variants */
+@utility bg-gold-400\/10 {
+    background-color: color-mix(in srgb, var(--color-gold-400) 10%, transparent);
+}
+
+@utility bg-gold-400\/20 {
+    background-color: color-mix(in srgb, var(--color-gold-400) 20%, transparent);
+}
+
+@utility bg-gold-400\/30 {
+    background-color: color-mix(in srgb, var(--color-gold-400) 30%, transparent);
+}
+
+@utility bg-gold-400\/40 {
+    background-color: color-mix(in srgb, var(--color-gold-400) 40%, transparent);
+}
+
+@utility bg-gold-400\/50 {
+    background-color: color-mix(in srgb, var(--color-gold-400) 50%, transparent);
+}
+
+/* bg-gold-500 with opacity variants */
+@utility bg-gold-500\/10 {
+    background-color: color-mix(in srgb, var(--color-gold-500) 10%, transparent);
+}
+
+@utility bg-gold-500\/20 {
+    background-color: color-mix(in srgb, var(--color-gold-500) 20%, transparent);
+}
+
+@utility bg-gold-500\/30 {
+    background-color: color-mix(in srgb, var(--color-gold-500) 30%, transparent);
+}
+
+@utility bg-gold-500\/40 {
+    background-color: color-mix(in srgb, var(--color-gold-500) 40%, transparent);
+}
+
+@utility bg-gold-500\/50 {
+    background-color: color-mix(in srgb, var(--color-gold-500) 50%, transparent);
+}
+
+/* bg-gold-600 with opacity variants */
+@utility bg-gold-600\/10 {
+    background-color: color-mix(in srgb, var(--color-gold-600) 10%, transparent);
+}
+
+@utility bg-gold-600\/20 {
+    background-color: color-mix(in srgb, var(--color-gold-600) 20%, transparent);
+}
+
+@utility bg-gold-600\/30 {
+    background-color: color-mix(in srgb, var(--color-gold-600) 30%, transparent);
+}
+
+@utility bg-gold-600\/40 {
+    background-color: color-mix(in srgb, var(--color-gold-600) 40%, transparent);
+}
+
+@utility bg-gold-600\/50 {
+    background-color: color-mix(in srgb, var(--color-gold-600) 50%, transparent);
+}
+
+/* bg-gold-700 with opacity variants */
+@utility bg-gold-700\/10 {
+    background-color: color-mix(in srgb, var(--color-gold-700) 10%, transparent);
+}
+
+@utility bg-gold-700\/20 {
+    background-color: color-mix(in srgb, var(--color-gold-700) 20%, transparent);
+}
+
+@utility bg-gold-700\/30 {
+    background-color: color-mix(in srgb, var(--color-gold-700) 30%, transparent);
+}
+
+@utility bg-gold-700\/40 {
+    background-color: color-mix(in srgb, var(--color-gold-700) 40%, transparent);
+}
+
+@utility bg-gold-700\/50 {
+    background-color: color-mix(in srgb, var(--color-gold-700) 50%, transparent);
+}
+
+/* bg-gold-800 with opacity variants */
+@utility bg-gold-800\/10 {
+    background-color: color-mix(in srgb, var(--color-gold-800) 10%, transparent);
+}
+
+@utility bg-gold-800\/20 {
+    background-color: color-mix(in srgb, var(--color-gold-800) 20%, transparent);
+}
+
+@utility bg-gold-800\/30 {
+    background-color: color-mix(in srgb, var(--color-gold-800) 30%, transparent);
+}
+
+@utility bg-gold-800\/40 {
+    background-color: color-mix(in srgb, var(--color-gold-800) 40%, transparent);
+}
+
+@utility bg-gold-800\/50 {
+    background-color: color-mix(in srgb, var(--color-gold-800) 50%, transparent);
+}
+
+/* bg-gold-900 with opacity variants - MOST USED */
+@utility bg-gold-900\/10 {
+    background-color: color-mix(in srgb, var(--color-gold-900) 10%, transparent);
+}
+
+@utility bg-gold-900\/20 {
+    background-color: color-mix(in srgb, var(--color-gold-900) 20%, transparent);
+}
+
+@utility bg-gold-900\/30 {
+    background-color: color-mix(in srgb, var(--color-gold-900) 30%, transparent);
+}
+
+@utility bg-gold-900\/40 {
+    background-color: color-mix(in srgb, var(--color-gold-900) 40%, transparent);
+}
+
+@utility bg-gold-900\/50 {
+    background-color: color-mix(in srgb, var(--color-gold-900) 50%, transparent);
+}
+
+/* ============================================
+   BORDER GOLD WITH OPACITY
+   ============================================ */
+
+/* border-gold-400 with opacity variants */
+@utility border-gold-400\/10 {
+    border-color: color-mix(in srgb, var(--color-gold-400) 10%, transparent);
+}
+
+@utility border-gold-400\/20 {
+    border-color: color-mix(in srgb, var(--color-gold-400) 20%, transparent);
+}
+
+@utility border-gold-400\/30 {
+    border-color: color-mix(in srgb, var(--color-gold-400) 30%, transparent);
+}
+
+@utility border-gold-400\/40 {
+    border-color: color-mix(in srgb, var(--color-gold-400) 40%, transparent);
+}
+
+@utility border-gold-400\/50 {
+    border-color: color-mix(in srgb, var(--color-gold-400) 50%, transparent);
+}
+
+/* border-gold-500 with opacity variants - MOST USED */
+@utility border-gold-500\/10 {
+    border-color: color-mix(in srgb, var(--color-gold-500) 10%, transparent);
+}
+
+@utility border-gold-500\/20 {
+    border-color: color-mix(in srgb, var(--color-gold-500) 20%, transparent);
+}
+
+@utility border-gold-500\/30 {
+    border-color: color-mix(in srgb, var(--color-gold-500) 30%, transparent);
+}
+
+@utility border-gold-500\/40 {
+    border-color: color-mix(in srgb, var(--color-gold-500) 40%, transparent);
+}
+
+@utility border-gold-500\/50 {
+    border-color: color-mix(in srgb, var(--color-gold-500) 50%, transparent);
+}
+
+/* border-gold-600 with opacity variants */
+@utility border-gold-600\/10 {
+    border-color: color-mix(in srgb, var(--color-gold-600) 10%, transparent);
+}
+
+@utility border-gold-600\/20 {
+    border-color: color-mix(in srgb, var(--color-gold-600) 20%, transparent);
+}
+
+@utility border-gold-600\/30 {
+    border-color: color-mix(in srgb, var(--color-gold-600) 30%, transparent);
+}
+
+@utility border-gold-600\/40 {
+    border-color: color-mix(in srgb, var(--color-gold-600) 40%, transparent);
+}
+
+@utility border-gold-600\/50 {
+    border-color: color-mix(in srgb, var(--color-gold-600) 50%, transparent);
+}
+
+/* border-gold-700 with opacity variants */
+@utility border-gold-700\/10 {
+    border-color: color-mix(in srgb, var(--color-gold-700) 10%, transparent);
+}
+
+@utility border-gold-700\/20 {
+    border-color: color-mix(in srgb, var(--color-gold-700) 20%, transparent);
+}
+
+@utility border-gold-700\/30 {
+    border-color: color-mix(in srgb, var(--color-gold-700) 30%, transparent);
+}
+
+@utility border-gold-700\/40 {
+    border-color: color-mix(in srgb, var(--color-gold-700) 40%, transparent);
+}
+
+@utility border-gold-700\/50 {
+    border-color: color-mix(in srgb, var(--color-gold-700) 50%, transparent);
+}
+
+/* border-gold-800 with opacity variants */
+@utility border-gold-800\/10 {
+    border-color: color-mix(in srgb, var(--color-gold-800) 10%, transparent);
+}
+
+@utility border-gold-800\/20 {
+    border-color: color-mix(in srgb, var(--color-gold-800) 20%, transparent);
+}
+
+@utility border-gold-800\/30 {
+    border-color: color-mix(in srgb, var(--color-gold-800) 30%, transparent);
+}
+
+@utility border-gold-800\/40 {
+    border-color: color-mix(in srgb, var(--color-gold-800) 40%, transparent);
+}
+
+@utility border-gold-800\/50 {
+    border-color: color-mix(in srgb, var(--color-gold-800) 50%, transparent);
+}
+
+/* border-gold-900 with opacity variants */
+@utility border-gold-900\/10 {
+    border-color: color-mix(in srgb, var(--color-gold-900) 10%, transparent);
+}
+
+@utility border-gold-900\/20 {
+    border-color: color-mix(in srgb, var(--color-gold-900) 20%, transparent);
+}
+
+@utility border-gold-900\/30 {
+    border-color: color-mix(in srgb, var(--color-gold-900) 30%, transparent);
+}
+
+@utility border-gold-900\/40 {
+    border-color: color-mix(in srgb, var(--color-gold-900) 40%, transparent);
+}
+
+@utility border-gold-900\/50 {
+    border-color: color-mix(in srgb, var(--color-gold-900) 50%, transparent);
+}
+
+/* ============================================
+   TEXT GOLD WITH OPACITY (for completeness)
+   ============================================ */
+
+@utility text-gold-400\/50 {
+    color: color-mix(in srgb, var(--color-gold-400) 50%, transparent);
+}
+
+@utility text-gold-500\/50 {
+    color: color-mix(in srgb, var(--color-gold-500) 50%, transparent);
+}
+
+@utility text-gold-600\/50 {
+    color: color-mix(in srgb, var(--color-gold-600) 50%, transparent);
+}

@@ -1,8 +1,39 @@
 /* Import Google Fonts - must be first */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap');
 
 /* Tailwind CSS v4 import */
 @import "tailwindcss";
+
+/* Custom gold color utilities with opacity - fixes Tailwind v4 JIT bug */
+@import "./src/styles/colors.css";
+
+/* Configure content sources for utility generation */
+@source "./index.html";
+@source "./*.{js,ts,jsx,tsx}";
+@source "./components/**/*.{js,ts,jsx,tsx}";
+
+/* Custom theme configuration for Tailwind v4 */
+@theme {
+    /* Custom gold color palette */
+    --color-gold-50: #FBF8EB;
+    --color-gold-100: #F5EFCF;
+    --color-gold-200: #EAD99F;
+    --color-gold-300: #DFC36F;
+    --color-gold-400: #D4AF37;
+    --color-gold-500: #B5952F;
+    --color-gold-600: #967C27;
+    --color-gold-700: #77621F;
+    --color-gold-800: #584817;
+    --color-gold-900: #392F0F;
+
+    /* Extended gray palette */
+    --color-gray-750: #2d3748;
+    --color-gray-850: #1a202c;
+    --color-gray-950: #0d1117;
+
+    /* Custom animations */
+    --animate-fade-in-up: fadeInUp 0.5s ease-out;
+}
 
 /* Base styles */
 body {
@@ -48,6 +79,18 @@ html {
 
 .animate-fade-in-up {
     animation: fadeInUp 0.5s ease-out;
+}
+
+/* Fix/Recharts: evitar contenedores con tamaño 0 en tabs */
+.recharts-responsive-container {
+    min-width: 0;
+    min-height: 200px;
+}
+
+/* Reduce warnings for hidden charts during tab switches */
+.recharts-wrapper {
+    min-width: 0;
+    min-height: 200px;
 }
 
 /* Gold gradient text */

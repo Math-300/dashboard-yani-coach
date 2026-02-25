@@ -21,6 +21,13 @@
                 "mcp-remote",
                 "https://mcp.vercel.com"
             ]
+        },
+        "mcp-server-chart": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "@antvis/mcp-server-chart"
+            ]
         }
     }
 }
