@@ -14,7 +14,7 @@ import React from 'react';
 import { Seller, Contact, Interaction, Sale, PurchaseAttempt, KpiCounts } from '../types';
 import {
     getRealSellers, getRealSales, getRealContacts, getRealInteractions,
-    getRealAttempts, getFunnelCounts, getInteractionCounts, getKpiCounts,
+    getRealAttempts, getSummaryMetrics,
     DateRange, FunnelCounts
 } from './noco';
 import { isApiConfigured, NOCODB_CONFIG } from '../config';
@@ -112,6 +112,7 @@ const withTimeout = <T>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
  */
 async function fetchAllData(dateRange?: DateRange | null, existingData?: CachedData | null): Promise<CachedData> {
     const isDemo = !isApiConfigured();
+    const shouldReuseSummary = !dateRange || (existingData?.dateRange && isSameDateRange(existingData.dateRange, dateRange));
 
     if (isDemo) {
         return {
@@ -147,23 +148,38 @@ async function fetchAllData(dateRange?: DateRange | null, existingData?: CachedD
         sellers = await getRealSellers();
     }
 
-    // ⚡ Paso 2: Conteos del embudo (reutilizar si el dateRange no cambió)
-    // Los conteos del embudo son GLOBALES (no filtrados por fecha)
-    let funnelCounts: FunnelCounts;
-    if (existingData?.funnelCounts && Object.keys(existingData.funnelCounts).length > 0) {
-        funnelCounts = existingData.funnelCounts;
-        if (NOCODB_CONFIG.DEBUG) console.log('[Cache] Reutilizando conteos del embudo.');
-    } else {
-        funnelCounts = await getFunnelCounts();
+    // ⚡ Paso 2: Métricas agregadas del servidor (1 request)
+    let funnelCounts: FunnelCounts = existingData?.funnelCounts || {};
+    let interactionCounts: Record<string, number> = existingData?.interactionCounts || {};
+    let kpiCounts: KpiCounts = existingData?.kpiCounts || {
+        leadsCreated: 0,
+        newLeads: 0,
+        urgentFollowUps: 0,
+        salesCount: 0
+    };
+
+    try {
+        if (!shouldReuseSummary || Object.keys(funnelCounts).length === 0) {
+            const summary = await getSummaryMetrics(dateRange);
+            if (summary.funnelCounts && Object.keys(summary.funnelCounts).length > 0) {
+                funnelCounts = summary.funnelCounts;
+            }
+            if (summary.interactionCounts && Object.keys(summary.interactionCounts).length > 0) {
+                interactionCounts = summary.interactionCounts;
+            }
+            if (summary.kpiCounts) {
+                kpiCounts = summary.kpiCounts;
+            }
+        }
+    } catch (error) {
+        if (NOCODB_CONFIG.DEBUG) console.warn('[Cache] Summary metrics falló, usando caché previa.');
     }
 
-    // ⚡ Paso 3-8: Datos filtrados por fecha (secuencial para evitar 429)
+    // ⚡ Paso 3-6: Datos filtrados por fecha (secuencial para evitar 429)
     const sales = await getRealSales(dateRange);
     const contacts = await getRealContacts(dateRange);
     const interactions = await getRealInteractions(dateRange);
-    const interactionCounts = await getInteractionCounts(dateRange);
     const attempts = await getRealAttempts(dateRange);
-    const kpiCounts = await getKpiCounts(dateRange);
 
     if (NOCODB_CONFIG.DEBUG) {
         console.log('[Cache] Datos cargados (micro-fetching):', {
@@ -207,7 +223,7 @@ export const invalidateCache = async (dateRange?: DateRange | null) => {
     notifySubscribers();
 
     try {
-        const data = await withTimeout(fetchAllData(dateRange, cacheState.data), CACHE_CONFIG.REQUEST_TIMEOUT * 3);
+        const data = await withTimeout(fetchAllData(dateRange, cacheState.data), CACHE_CONFIG.REQUEST_TIMEOUT * 6);
         cacheState = {
             data,
             isLoading: false,

@@ -249,7 +249,7 @@ const fetchNocoRecords = async (args: {
         throw new Error(`Tabla no válida: ${args.table}`);
     }
 
-    const limit = typeof args.limit === 'number' ? args.limit : 100;
+    const limit = typeof args.limit === 'number' ? Math.min(args.limit, 50) : 50;
     const offset = typeof args.offset === 'number' ? args.offset : 0;
 
     const url = new URL(`${NOCODB_URL}/api/v2/tables/${tableId}/records`);

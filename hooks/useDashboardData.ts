@@ -170,6 +170,7 @@ export function useDashboardData(
     // Effect 3: Recarga cuando cambian las fechas
     useEffect(() => {
         if (!isInitialLoad) {
+            setIsInitialLoad(true);
             const dateRange: DateRange = { start: startDate, end: endDate };
             invalidateCache(dateRange);
         }

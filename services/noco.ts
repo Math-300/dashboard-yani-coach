@@ -35,6 +35,12 @@ export interface FunnelCounts {
   [status: string]: number;
 }
 
+export interface SummaryMetrics {
+  funnelCounts: FunnelCounts;
+  interactionCounts: Record<string, number>;
+  kpiCounts: KpiCounts;
+}
+
 // ============================================
 // HELPERS ROBUSTOS
 // ============================================
@@ -624,5 +630,30 @@ const mapContact = (item: any): Contact => {
     leadSource: item['Nombre de la Etiqueta'] || item.LeadSource || undefined,
     discountApplied: parseAmount(item['Descuento Aplicado'] || 0) || undefined,
     lostReasonDetail: item['Motivo Venta Perdida'] || undefined
+  };
+};
+/**
+ * ⚡ Resumen agregado desde el servidor (1 request)
+ */
+export const getSummaryMetrics = async (dateRange?: DateRange | null): Promise<SummaryMetrics> => {
+  const params = dateRange
+    ? `start=${formatDateLocal(dateRange.start)}&end=${formatDateLocal(dateRange.end)}`
+    : '';
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const url = `${baseUrl}/api/metrics/summary${params ? `?${params}` : ''}`;
+
+  const json = await fetchWithRetry(url, { 'Content-Type': 'application/json' }, 'Summary Metrics');
+  if (!json) {
+    return {
+      funnelCounts: {},
+      interactionCounts: {},
+      kpiCounts: { leadsCreated: 0, newLeads: 0, urgentFollowUps: 0, salesCount: 0 }
+    };
+  }
+
+  return {
+    funnelCounts: json.funnelCounts || {},
+    interactionCounts: json.interactionCounts || {},
+    kpiCounts: json.kpiCounts || { leadsCreated: 0, newLeads: 0, urgentFollowUps: 0, salesCount: 0 }
   };
 };
