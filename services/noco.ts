@@ -107,6 +107,50 @@ const parseAmount = (val: any): number => {
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 const MAX_RETRIES = 3;
+const MAX_CONCURRENT_REQUESTS = 2;
+const MIN_REQUEST_INTERVAL_MS = 200;
+
+type QueueItem<T> = {
+  fn: () => Promise<T>;
+  resolve: (value: T) => void;
+  reject: (reason?: any) => void;
+};
+
+let activeRequests = 0;
+let lastRequestAt = 0;
+const requestQueue: QueueItem<any>[] = [];
+
+const runQueue = async () => {
+  if (activeRequests >= MAX_CONCURRENT_REQUESTS) return;
+  const item = requestQueue.shift();
+  if (!item) return;
+
+  activeRequests += 1;
+  const waitMs = Math.max(0, MIN_REQUEST_INTERVAL_MS - (Date.now() - lastRequestAt));
+  if (waitMs > 0) {
+    await sleep(waitMs);
+  }
+  lastRequestAt = Date.now();
+
+  try {
+    const result = await item.fn();
+    item.resolve(result);
+  } catch (error) {
+    item.reject(error);
+  } finally {
+    activeRequests -= 1;
+    if (requestQueue.length > 0) {
+      runQueue();
+    }
+  }
+};
+
+const scheduleRequest = async <T>(fn: () => Promise<T>): Promise<T> => {
+  return new Promise<T>((resolve, reject) => {
+    requestQueue.push({ fn, resolve, reject });
+    runQueue();
+  });
+};
 
 /**
  * Construye la URL y headers según el modo de conexión (Vite proxy / Directo / Vercel proxy)
@@ -141,9 +185,9 @@ const buildRequestConfig = (tableId: string, params: string): { url: string; hea
 const fetchWithRetry = async (url: string, headers: Record<string, string>, label: string): Promise<any | null> => {
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
-      const r = await fetch(url, { headers });
+      const r = await scheduleRequest(() => fetch(url, { headers }));
       if (r.status === 429) {
-        const waitMs = Math.pow(2, attempt) * 1000;
+        const waitMs = Math.pow(2, attempt) * 1000 + 500;
         console.warn(`[API] ${label}: 429, esperando ${waitMs}ms (intento ${attempt + 1}/${MAX_RETRIES})`);
         await sleep(waitMs);
         continue;
@@ -316,7 +360,7 @@ export const getFunnelCounts = async (): Promise<FunnelCounts> => {
   ];
 
   const counts: FunnelCounts = {};
-  const BATCH_SIZE = 5; // Ejecutar max 5 en paralelo para no saturar
+  const BATCH_SIZE = 2; // Ejecutar en paralelo con límite más estricto
 
   for (let i = 0; i < statuses.length; i += BATCH_SIZE) {
     const batch = statuses.slice(i, i + BATCH_SIZE);

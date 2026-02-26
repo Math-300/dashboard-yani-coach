@@ -61,6 +61,73 @@ const isAuthenticated = (request: VercelRequest) => {
 const NOCODB_URL = process.env.NOCODB_URL || 'https://app.nocodb.com';
 const NOCODB_TOKEN = process.env.NOCODB_TOKEN;
 
+// Rate limiting + cache in-memory (por instancia serverless)
+const MAX_CONCURRENT_REQUESTS = 2;
+const MIN_REQUEST_INTERVAL_MS = 200;
+const CACHE_TTL_MS = 30 * 1000; // 30s
+
+type CacheEntry = { expiresAt: number; payload: any };
+const responseCache = new Map<string, CacheEntry>();
+
+type QueueItem<T> = {
+    fn: () => Promise<T>;
+    resolve: (value: T) => void;
+    reject: (reason?: any) => void;
+};
+
+let activeRequests = 0;
+let lastRequestAt = 0;
+const requestQueue: QueueItem<any>[] = [];
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const runQueue = async () => {
+    if (activeRequests >= MAX_CONCURRENT_REQUESTS) return;
+    const item = requestQueue.shift();
+    if (!item) return;
+
+    activeRequests += 1;
+    const waitMs = Math.max(0, MIN_REQUEST_INTERVAL_MS - (Date.now() - lastRequestAt));
+    if (waitMs > 0) {
+        await sleep(waitMs);
+    }
+    lastRequestAt = Date.now();
+
+    try {
+        const result = await item.fn();
+        item.resolve(result);
+    } catch (error) {
+        item.reject(error);
+    } finally {
+        activeRequests -= 1;
+        if (requestQueue.length > 0) {
+            runQueue();
+        }
+    }
+};
+
+const scheduleRequest = async <T>(fn: () => Promise<T>): Promise<T> => {
+    return new Promise<T>((resolve, reject) => {
+        requestQueue.push({ fn, resolve, reject });
+        runQueue();
+    });
+};
+
+const fetchWithRetry = async (url: string, headers: Record<string, string>) => {
+    const MAX_RETRIES = 3;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        const response = await scheduleRequest(() => fetch(url, { headers }));
+        if (response.status === 429) {
+            const waitMs = Math.pow(2, attempt) * 1000 + 500;
+            console.warn(`[API] 429 desde NocoDB, reintentando en ${waitMs}ms (intento ${attempt + 1}/${MAX_RETRIES})`);
+            await sleep(waitMs);
+            continue;
+        }
+        return response;
+    }
+    return null;
+};
+
 // IDs de las tablas (debes configurar estos en Vercel)
 const TABLES: Record<string, string> = {
     sellers: process.env.TABLE_SELLERS || 'me6kwgo0qvg0aug',
@@ -140,9 +207,11 @@ export default async function handler(
     }
 
     try {
-        // Obtener parámetros de query
-        const limit = request.query.limit || 1000;
-        const offset = request.query.offset || 0;
+        // Obtener parámetros de query (sanitizar)
+        const limitRaw = Array.isArray(request.query.limit) ? request.query.limit[0] : request.query.limit;
+        const offsetRaw = Array.isArray(request.query.offset) ? request.query.offset[0] : request.query.offset;
+        const limit = Math.min(Math.max(Number(limitRaw || 100), 1), 500);
+        const offset = Math.max(Number(offsetRaw || 0), 0);
         const fields = request.query.fields;
         const where = request.query.where;
         const sort = request.query.sort;
@@ -162,14 +231,26 @@ export default async function handler(
             url += `&sort=${sort}`;
         }
 
+        const cacheKey = `${tableName}:${url}`;
+        const cached = responseCache.get(cacheKey);
+        if (cached && cached.expiresAt > Date.now()) {
+            return response.status(200).json(cached.payload);
+        }
+
         console.log(`[API] Fetching ${tableName} from NocoDB...`);
 
-        const nocoResponse = await fetch(url, {
-            headers: {
-                'xc-token': NOCODB_TOKEN,
-                'Content-Type': 'application/json'
-            }
+        const nocoResponse = await fetchWithRetry(url, {
+            'xc-token': NOCODB_TOKEN,
+            'Content-Type': 'application/json'
         });
+
+        if (!nocoResponse) {
+            return response.status(429).json({
+                error: 'Error de NocoDB: 429 Too Many Requests',
+                table: tableName,
+                hint: 'Rate limit alcanzado, reintentar más tarde'
+            });
+        }
 
         if (!nocoResponse.ok) {
             const errorText = await nocoResponse.text();
@@ -191,7 +272,7 @@ export default async function handler(
         console.log(`[API] Successfully fetched ${data.list?.length || 0} records from ${tableName}`);
 
         // Responder con formato compatible con el frontend
-        response.status(200).json({
+        const payload = {
             list: data.list || [],
             pageInfo: data.pageInfo || {
                 totalRows: data.list?.length || 0,
@@ -200,7 +281,10 @@ export default async function handler(
                 isFirstPage: true,
                 isLastPage: true
             }
-        });
+        };
+
+        responseCache.set(cacheKey, { expiresAt: Date.now() + CACHE_TTL_MS, payload });
+        response.status(200).json(payload);
 
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Error desconocido';

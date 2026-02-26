@@ -157,15 +157,13 @@ async function fetchAllData(dateRange?: DateRange | null, existingData?: CachedD
         funnelCounts = await getFunnelCounts();
     }
 
-    // ⚡ Paso 3-8: Datos filtrados por fecha (en paralelo)
-    const [sales, contacts, interactions, interactionCounts, attempts, kpiCounts] = await Promise.all([
-        getRealSales(dateRange),
-        getRealContacts(dateRange),
-        getRealInteractions(dateRange),
-        getInteractionCounts(dateRange),
-        getRealAttempts(dateRange),
-        getKpiCounts(dateRange),
-    ]);
+    // ⚡ Paso 3-8: Datos filtrados por fecha (secuencial para evitar 429)
+    const sales = await getRealSales(dateRange);
+    const contacts = await getRealContacts(dateRange);
+    const interactions = await getRealInteractions(dateRange);
+    const interactionCounts = await getInteractionCounts(dateRange);
+    const attempts = await getRealAttempts(dateRange);
+    const kpiCounts = await getKpiCounts(dateRange);
 
     if (NOCODB_CONFIG.DEBUG) {
         console.log('[Cache] Datos cargados (micro-fetching):', {
