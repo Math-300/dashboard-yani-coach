@@ -37,6 +37,14 @@ export interface Seller {
   id: string;
   name: string;
   avatarUrl?: string;
+  // Rollups pre-calculados de NocoDB
+  totalSalesAmount?: number;
+  salesCount?: number;
+  leadsTotal?: number;
+  leadsToday?: number;
+  interactionsCount?: number;
+  recoveriesAssigned?: number;
+  status?: string;
 }
 
 export interface Contact {
@@ -85,6 +93,17 @@ export interface PurchaseAttempt {
   status: PurchaseAttemptStatus;
   date: string;
   recoverySellerId?: string;
+}
+
+// ============================================
+// KPI COUNTS (Micro-Fetching)
+// ============================================
+
+export interface KpiCounts {
+  leadsCreated: number;
+  newLeads: number;
+  urgentFollowUps: number;
+  salesCount: number;
 }
 
 // Dashboard State Interface

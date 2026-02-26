@@ -56,20 +56,15 @@ export interface FunnelStep {
  * @returns Número total de contactos activos en el pipeline
  * 
  * @example
- * const contacts = [{ status: LeadStatus.NEW }, { status: LeadStatus.CONTACTED }];
- * calculateTotalLeadsInPipeline(contacts); // Returns: 2
+ * const counts = { 'Lead Nuevo': 2, 'Venta Ganada': 1 };
+ * calculateTotalLeadsInPipeline(counts); // Returns: 2
  */
-export const calculateTotalLeadsInPipeline = (contacts: Contact[]): number => {
-    // Un contacto está en el pipeline si no está cerrado (ganado o perdido)
-    const activeStatuses = [
-        LeadStatus.NEW,
-        LeadStatus.CONTACTED,
-        LeadStatus.INTERESTED
-    ];
+export const calculateTotalLeadsInPipeline = (funnelCounts: Record<string, number>): number => {
+    const inactiveStatuses = ['Venta Ganada', 'Venta Perdida', 'Leads perdidos (que nunca contestaron)', 'no contactar'];
 
-    return contacts.filter(contact =>
-        activeStatuses.includes(contact.status)
-    ).length;
+    return Object.entries(funnelCounts)
+        .filter(([status]) => !inactiveStatuses.includes(status))
+        .reduce((sum, [, count]) => sum + (count || 0), 0);
 };
 
 /**
@@ -80,27 +75,10 @@ export const calculateTotalLeadsInPipeline = (contacts: Contact[]): number => {
  * @returns Número de leads con Estado = "Lead Nuevo"
  * 
  * @example
- * // Si hay 3 contactos con estado "Nuevo"
- * calculateNewLeadsToday(contacts); // Returns: 3
+ * calculateNewLeadsToday(3); // Returns: 3
  */
-export const calculateNewLeadsToday = (
-    contacts: Contact[],
-    dateRange?: { start: Date; end: Date }
-): number => {
-    // ✅ Comparación por día en hora local para evitar discrepancias de timezone
-    const rangeStart = dateRange?.start ? new Date(dateRange.start) : new Date();
-    const rangeEnd = dateRange?.end ? new Date(dateRange.end) : new Date();
-
-    if (!dateRange) {
-        rangeStart.setHours(0, 0, 0, 0);
-        rangeEnd.setHours(23, 59, 59, 999);
-    }
-
-    return contacts.filter(contact => {
-        if (contact.status !== LeadStatus.NEW) return false;
-        const createdAt = new Date(contact.createdAt);
-        return createdAt >= rangeStart && createdAt <= rangeEnd;
-    }).length;
+export const calculateNewLeadsToday = (newLeadsCount: number): number => {
+    return newLeadsCount;
 };
 
 /**
@@ -188,32 +166,23 @@ export const calculateMonthlySales = (
 
 /**
  * Calcula la tasa de conversión del pipeline
- * Fórmula: (Ganados / (Ganados + Perdidos)) × 100
+ * Fórmula: (Ventas Totales en el periodo / Leads Creados en el periodo) * 100
+ * Esta es la métrica de SaaS estándar (Lead to Sale Conversion Rate)
  * 
- * @param contacts - Lista de contactos (ya filtrados por el servidor si hay dateRange)
- * @param dateRange - Rango de fechas opcional (solo para indicar que datos vienen filtrados)
+ * @param contacts - Lista de leads generados en el periodo
+ * @param sales - Lista de ventas en el periodo
+ * @param dateRange - Rango de fechas opcional
  * @returns Porcentaje de conversión (0-100)
- * 
- * @example
- * // Si hay 20 ganados y 5 perdidos
- * calculateConversionRate(contacts); // Returns: 80 (80%)
  */
 export const calculateConversionRate = (
-    contacts: Contact[],
-    dateRange?: { start: Date; end: Date }
+    leadsCreated: number,
+    salesCount: number
 ): number => {
-    // ✅ CORREGIDO: Si hay dateRange, los datos YA vienen filtrados del servidor
-    // No volvemos a filtrar para evitar problemas de timezone
-    const contactsToAnalyze = dateRange ? contacts : contacts;
+    if (leadsCreated === 0) {
+        return salesCount > 0 ? 100 : 0;
+    }
 
-    const won = contactsToAnalyze.filter(c => c.status === LeadStatus.CLOSED_WON).length;
-    const lost = contactsToAnalyze.filter(c => c.status === LeadStatus.CLOSED_LOST).length;
-
-    const total = won + lost;
-
-    if (total === 0) return 0;
-
-    return Math.round((won / total) * 100);
+    return Math.round((salesCount / leadsCreated) * 100);
 };
 
 /**
@@ -224,29 +193,10 @@ export const calculateConversionRate = (
  * @returns Número de contactos con seguimiento pendiente para hoy
  * 
  * @example
- * // Si hay 5 contactos con nextContactDate = hoy
- * calculateUrgentFollowUps(contacts); // Returns: 5
+ * calculateUrgentFollowUps(5); // Returns: 5
  */
-export const calculateUrgentFollowUps = (contacts: Contact[]): number => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const endOfToday = new Date(today);
-    endOfToday.setHours(23, 59, 59, 999);
-
-    return contacts.filter(contact => {
-        // Solo contactos activos (no cerrados)
-        if (contact.status === LeadStatus.CLOSED_WON ||
-            contact.status === LeadStatus.CLOSED_LOST) {
-            return false;
-        }
-
-        // Verificar si tiene fecha de próximo contacto
-        if (!contact.nextContactDate) return false;
-
-        const nextContact = new Date(contact.nextContactDate);
-        return nextContact >= today && nextContact <= endOfToday;
-    }).length;
+export const calculateUrgentFollowUps = (urgentFollowUpsCount: number): number => {
+    return urgentFollowUpsCount;
 };
 
 /**
@@ -260,14 +210,13 @@ export const calculateUrgentFollowUps = (contacts: Contact[]): number => {
  * calculatePipelineValue(contacts); // Returns: 450000
  */
 export const calculatePipelineValue = (contacts: Contact[]): number => {
-    const activeStatuses = [
-        LeadStatus.NEW,
-        LeadStatus.CONTACTED,
-        LeadStatus.INTERESTED
+    const inactiveStatuses = [
+        LeadStatus.CLOSED_WON,
+        LeadStatus.CLOSED_LOST
     ];
 
     return contacts
-        .filter(contact => activeStatuses.includes(contact.status))
+        .filter(contact => !inactiveStatuses.includes(contact.status))
         .reduce((sum, contact) => sum + (contact.estimatedValue || 0), 0);
 };
 
@@ -1165,22 +1114,10 @@ export const calculateInteractionResults = (interactions: Interaction[]): Result
  * @returns Promedio de interacciones por lead
  */
 export const calculateAvgInteractionsPerLead = (
-    contacts: Contact[],
-    interactions: Interaction[]
+    activeLeads: number,
+    totalInteractions: number
 ): number => {
-    // Contar leads activos (excluyendo Ganados y Perdidos)
-    const activeStatuses = [
-        LeadStatus.NEW,
-        LeadStatus.CONTACTED,
-        LeadStatus.INTERESTED
-    ];
-
-    const activeLeads = contacts.filter(c => activeStatuses.includes(c.status)).length;
-
     if (activeLeads === 0) return 0;
-
-    // Total de interacciones
-    const totalInteractions = interactions.length;
 
     return Math.round((totalInteractions / activeLeads) * 10) / 10; // 1 decimal
 };

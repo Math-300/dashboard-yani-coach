@@ -1,0 +1,14 @@
+﻿{
+    "Id":  1,
+    "Fecha del Intento":  null,
+    "Estado":  null,
+    "Mensaje de Error":  null,
+    "Vendedoras_id":  null,
+    "Contactos_id":  null,
+    "CreatedAt":  "2025-09-30 16:08:27+00:00",
+    "UpdatedAt":  "2025-11-18 18:01:04+00:00",
+    "Usuario Vendedora":  null,
+    "Vendedora de Recuperación":  null,
+    "Quién Intentó Comprar":  null,
+    "Venta Realizada":  null
+}

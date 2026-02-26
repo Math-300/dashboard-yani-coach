@@ -1,16 +1,15 @@
 /**
  * Hook personalizado para manejar datos del Dashboard con caché integrado
  * 
- * Características:
+ * ⚡ OPTIMIZADO: Usa micro-fetching.
  * - Carga datos una sola vez al iniciar
- * - 🚀 NUEVO: Filtrado por fecha en el servidor (server-side filtering)
+ * - Filtrado por fecha en el servidor
  * - Revalidación automática en background
- * - Estado de carga y error manejados
- * - Timeout y detección de errores de red
+ * - Expone funnelCounts (conteos por estado) en lugar de 27K registros
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Contact, Interaction, Sale, PurchaseAttempt, Seller } from '../types';
+import { Contact, Interaction, Sale, PurchaseAttempt, Seller, KpiCounts } from '../types';
 import {
     getData,
     invalidateCache,
@@ -19,7 +18,7 @@ import {
     getCacheState,
     CachedData
 } from '../services/cacheService';
-import { DateRange } from '../services/noco';
+import { DateRange, FunnelCounts } from '../services/noco';
 
 interface UseDashboardDataResult {
     // Datos filtrados por fecha
@@ -29,14 +28,16 @@ interface UseDashboardDataResult {
     attempts: PurchaseAttempt[];
     sellers: Seller[];
 
-    // 🚀 NUEVO: Todos los contactos (sin filtro) para embudo y pipeline
-    allContacts: Contact[];
+    // ⚡ Conteos pre-calculados (sin descargar 27K registros)
+    funnelCounts: FunnelCounts;
+    interactionCounts: Record<string, number>;
+    kpiCounts: KpiCounts;
 
     // Estados
     isLoading: boolean;
     isDemo: boolean;
     error: Error | null;
-    isNetworkError: boolean; // Nuevo: indica si es error de red
+    isNetworkError: boolean;
 
     // Acciones
     refresh: () => Promise<void>;
@@ -52,7 +53,6 @@ export function useDashboardData(
     startDate: Date,
     endDate: Date
 ): UseDashboardDataResult {
-    // Estado para datos filtrados
     const [filteredData, setFilteredData] = useState<{
         contacts: Contact[];
         interactions: Interaction[];
@@ -65,52 +65,52 @@ export function useDashboardData(
         attempts: [],
     });
 
-    // 🚀 NUEVO: Estado para TODOS los contactos (sin filtro de fecha)
-    // Necesario para cálculos de embudo y pipeline que deben considerar todas las ventas
-    const [allContacts, setAllContacts] = useState<Contact[]>([]);
-
-    // Estado para sellers (no se filtran por fecha)
     const [sellers, setSellers] = useState<Seller[]>([]);
-
-    // Estados de UI
+    const [funnelCounts, setFunnelCounts] = useState<FunnelCounts>({});
+    const [interactionCounts, setInteractionCounts] = useState<Record<string, number>>({});
+    const [kpiCounts, setKpiCounts] = useState<KpiCounts>({
+        leadsCreated: 0,
+        newLeads: 0,
+        urgentFollowUps: 0,
+        salesCount: 0
+    });
     const [isDemo, setIsDemo] = useState(false);
     const [error, setError] = useState<Error | null>(null);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
     const [isNetworkError, setIsNetworkError] = useState(false);
 
-    // Ref para evitar actualizaciones si el componente se desmonta
     const mountedRef = useRef(true);
 
     useEffect(() => {
         mountedRef.current = true;
-        return () => {
-            mountedRef.current = false;
-        };
+        return () => { mountedRef.current = false; };
     }, []);
 
-    // Función para cargar datos iniciales
-    // 🚀 NUEVO: Pasa dateRange para filtrado en el servidor
+    const applyDataToState = useCallback((cachedData: CachedData) => {
+        setSellers(cachedData.sellers);
+        setIsDemo(cachedData.isDemo);
+        setFunnelCounts(cachedData.funnelCounts || {});
+        setInteractionCounts(cachedData.interactionCounts || {});
+        setKpiCounts(cachedData.kpiCounts || {
+            leadsCreated: 0,
+            newLeads: 0,
+            urgentFollowUps: 0,
+            salesCount: 0
+        });
+
+        const filtered = filterByDateRange(cachedData, startDate, endDate);
+        setFilteredData(filtered);
+    }, [startDate, endDate]);
+
+    // Carga inicial
     const loadInitialData = useCallback(async () => {
         try {
-            // Crear DateRange para pasar al servidor
             const dateRange: DateRange = { start: startDate, end: endDate };
-
-            // 🚀 SERVER-SIDE FILTERING: Pasar dateRange a getData
             const cachedData = await getData(false, dateRange);
-
             if (!mountedRef.current) return;
 
             if (cachedData) {
-                setSellers(cachedData.sellers);
-                setIsDemo(cachedData.isDemo);
-
-                // 🚀 NUEVO: Cargar todos los contactos (sin filtro) para embudo y pipeline
-                setAllContacts(cachedData.allContacts || []);
-
-                // Los datos ya vienen filtrados del servidor, pero aplicamos
-                // filtro adicional en el cliente por si hay diferencias de timezone
-                const filtered = filterByDateRange(cachedData, startDate, endDate);
-                setFilteredData(filtered);
+                applyDataToState(cachedData);
                 setIsInitialLoad(false);
                 setIsNetworkError(false);
             }
@@ -118,101 +118,72 @@ export function useDashboardData(
             if (mountedRef.current) {
                 setError(err instanceof Error ? err : new Error('Error cargando datos'));
                 setIsInitialLoad(false);
-                // Verificar si es error de red desde el estado del caché
-                const cacheState = getCacheState();
-                setIsNetworkError(cacheState.isNetworkError);
+                setIsNetworkError(getCacheState().isNetworkError);
             }
         }
-    }, [startDate, endDate]);
+    }, [startDate, endDate, applyDataToState]);
 
-    // Función para refrescar datos (fuerza recarga desde API)
-    // 🚀 NUEVO: Pasa dateRange para filtrado en el servidor
+    // Refresh manual
     const refresh = useCallback(async () => {
         setIsInitialLoad(true);
         setError(null);
         setIsNetworkError(false);
 
         try {
-            // Crear DateRange para pasar al servidor
             const dateRange: DateRange = { start: startDate, end: endDate };
-
-            // 🚀 SERVER-SIDE FILTERING: Pasar dateRange a invalidateCache
             await invalidateCache(dateRange);
             const cachedData = getCacheState().data;
 
             if (cachedData && mountedRef.current) {
-                setSellers(cachedData.sellers);
-                setIsDemo(cachedData.isDemo);
-
-                // 🚀 NUEVO: Cargar todos los contactos (sin filtro) para embudo y pipeline
-                setAllContacts(cachedData.allContacts || []);
-
-                const filtered = filterByDateRange(cachedData, startDate, endDate);
-                setFilteredData(filtered);
+                applyDataToState(cachedData);
             }
         } catch (err) {
             if (mountedRef.current) {
                 setError(err instanceof Error ? err : new Error('Error refrescando datos'));
-                // Verificar si es error de red desde el estado del caché
-                const cacheState = getCacheState();
-                setIsNetworkError(cacheState.isNetworkError);
+                setIsNetworkError(getCacheState().isNetworkError);
             }
         } finally {
-            if (mountedRef.current) {
-                setIsInitialLoad(false);
-            }
+            if (mountedRef.current) setIsInitialLoad(false);
         }
-    }, [startDate, endDate]);
+    }, [startDate, endDate, applyDataToState]);
 
-    // Efecto 1: Cargar datos iniciales (solo una vez)
+    // Effect 1: Carga inicial
     useEffect(() => {
         loadInitialData();
     }, [loadInitialData]);
 
-    // Efecto 2: Suscribirse a cambios del caché
+    // Effect 2: Suscripción al caché
     useEffect(() => {
         const unsubscribe = subscribe((state) => {
             if (!mountedRef.current) return;
-
             if (state.data) {
-                setSellers(state.data.sellers);
-                setIsDemo(state.data.isDemo);
-
-                // 🚀 NUEVO: Actualizar todos los contactos
-                setAllContacts(state.data.allContacts || []);
-
-                const filtered = filterByDateRange(state.data, startDate, endDate);
-                setFilteredData(filtered);
+                applyDataToState(state.data);
             }
-
             if (state.error) {
                 setError(state.error);
                 setIsNetworkError(state.isNetworkError);
             }
         });
-
         return unsubscribe;
-    }, [startDate, endDate]);
+    }, [applyDataToState]);
 
-    // Efecto 3: 🚀 NUEVO - Recargar datos cuando cambian las fechas (server-side filtering)
-    // Cuando el usuario cambia el rango de fechas, necesitamos recargar los datos
-    // desde el servidor con el nuevo filtro, en lugar de solo filtrar en el cliente.
+    // Effect 3: Recarga cuando cambian las fechas
     useEffect(() => {
-        // Solo recargar si ya tenemos datos cargados (no en la carga inicial)
         if (!isInitialLoad) {
             const dateRange: DateRange = { start: startDate, end: endDate };
             invalidateCache(dateRange);
         }
     }, [startDate, endDate]);
 
-    // Obtener estado de carga actual
     const cacheState = getCacheState();
     const isLoading = cacheState.isLoading && isInitialLoad;
 
     return {
         ...filteredData,
         sellers,
-        allContacts, // 🚀 NUEVO: Todos los contactos para embudo y pipeline
+        funnelCounts,
+        interactionCounts,
+        kpiCounts,
         isLoading,
         isDemo,
         error,

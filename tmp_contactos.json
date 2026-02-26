@@ -1,0 +1,62 @@
+﻿{
+    "Lead_Age_Days":  139,
+    "Id":  752,
+    "Nombre":  "Yeidy",
+    "Apellido":  null,
+    "Email":  "yeidylcanario@icloud.com",
+    "Teléfono":  "14016883229",
+    "País":  "US",
+    "Estado Actual":  "En Seguimiento 7 días",
+    "Motivo Venta Perdida":  null,
+    "Vendedoras_id":  1,
+    "Avatar":  [
+
+               ],
+    "Etiquetas_id":  null,
+    "Etiquetas Vinculadas OK":  true,
+    "Registrar Actividad":  "Cliente no contestó el mensaje que se le envió al whatsapp",
+    "Desafío":  null,
+    "EstimatedValue":  null,
+    "CreatedAt":  "2025-10-09 17:04:12+00:00",
+    "UpdatedAt":  "2025-11-02 17:19:29+00:00",
+    "Fecha y hora de creación":  "2025-10-09 17:04:12+00:00",
+    "Próximo Contacto":  "2025-11-09 09:00:00+00:00",
+    "Es_Lead_Hoy":  0,
+    "Urgencia_Seguimiento":  "URGENTE",
+    "Usuario Asignado":  [
+                             {
+                                 "id":  "uski3mh2e8jg2wev",
+                                 "email":  "contacto@yaninacoach.com",
+                                 "display_name":  null,
+                                 "meta":  null
+                             }
+                         ],
+    "Nombre de la Etiqueta (from Etiquetas)":  [
+                                                   "COMPRA EVENTO PRESENCIAL MEXICO CDM "
+                                               ],
+    "Conexión etiqueta":  1,
+    "Interacciones":  2,
+    "Intentos de Compra Realizados":  0,
+    "Curso Ofrecido":  0,
+    "Productos Adquiridos":  0,
+    "Compras":  0,
+    "Resumen de la Interacción (from Interacciones)":  [
+                                                           "Se envió un primer mensaje de contacto a Yeidy a través de WhatsApp, pero la cliente no respondió. Se intentó establecer comunicación inicial para presentarle la propuesta, sin embargo, no se obtuvo respuesta. Es recomendable realizar un seguimiento próximo para intentar reactivar el contacto y lograr interacción.",
+                                                           "3er intento: Lead no respondió a seguimiento de 24h. Usando automático 7 días. Próximo contacto: 2025-11-09 09:00:00"
+                                                       ],
+    "Last_Interaction":  [
+                             "2025-10-31 21:52:40+00:00",
+                             "2025-11-02 17:16:25+00:00"
+                         ],
+    "Conexión etiquetass":  null,
+    "_nc_m2m_Contactos_Etiquetas":  [
+                                        {
+                                            "Contactos_id":  752,
+                                            "Etiquetas_id":  1
+                                        }
+                                    ],
+    "Vendedora Asignada":  {
+                               "Id":  1,
+                               "Nombre de la Vendedora":  "Ana María Leon"
+                           }
+}

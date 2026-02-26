@@ -34,7 +34,9 @@ function DashboardShell() {
   // Los datos se cargan UNA sola vez y el filtrado es en el cliente
   const {
     contacts,
-    allContacts, // 🚀 NUEVO: Todos los contactos para embudo y pipeline
+    funnelCounts, // ⚡ Conteos del embudo (sin descargar 27K registros)
+    interactionCounts, // ⚡ Conteos de interacciones por canal
+    kpiCounts, // ⚡ Conteos de KPIs (micro-fetching)
     interactions,
     sales,
     attempts,
@@ -228,6 +230,8 @@ function DashboardShell() {
               {activeTab === 'executive' && (
                 <ExecutiveView
                   contacts={contacts}
+                  funnelCounts={funnelCounts}
+                  kpiCounts={kpiCounts}
                   sales={sales}
                   dateRange={dateRange}
                   isDarkMode={isDarkMode}
@@ -253,6 +257,9 @@ function DashboardShell() {
               {activeTab === 'pipeline' && (
                 <PipelineView
                   contacts={contacts}
+                  funnelCounts={funnelCounts}
+                  interactionCounts={interactionCounts}
+                  kpiCounts={kpiCounts}
                   interactions={interactions}
                   dateRange={dateRange}
                   isDarkMode={isDarkMode}

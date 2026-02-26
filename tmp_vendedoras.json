@@ -1,0 +1,125 @@
+﻿[
+    {
+        "Ticket Promedio":  null,
+        "Id":  1,
+        "Nombre de la Vendedora":  "Ana María Leon",
+        "Email":  "contacto@yaninacoach.com",
+        "Teléfono":  "954-999-3522",
+        "Usuario del Sistema":  [
+                                    {
+                                        "id":  "uski3mh2e8jg2wev",
+                                        "email":  "contacto@yaninacoach.com",
+                                        "display_name":  null,
+                                        "meta":  null
+                                    }
+                                ],
+        "Estado":  "Inactivo",
+        "Foto":  [
+                     {
+                         "url":  "https://nocohub-001-prod-app-attachments.s3.us-east-2.amazonaws.com/nc/uploads/2025/10/13/1296d5334ef877109967828862aecc1c71a38045/Imagen de WhatsApp 2025-10-13 a las 17.50.34_a697c2c8_Zxb4z.jpg",
+                         "title":  "Imagen de WhatsApp 2025-10-13 a las 17.50.34_a697c2c8.jpg",
+                         "mimetype":  "image/jpeg",
+                         "size":  43658,
+                         "width":  566,
+                         "height":  615,
+                         "id":  "ats664ptcnn4qijy",
+                         "thumbnails":  "@{tiny=; small=; card_cover=}",
+                         "signedUrl":  "https://nocohub-001-prod-app-attachments.s3.us-east-2.amazonaws.com/nc/uploads/2025/10/13/1296d5334ef877109967828862aecc1c71a38045/Imagen%20de%20WhatsApp%202025-10-13%20a%20las%2017.50.34_a697c2c8_Zxb4z.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256\u0026X-Amz-Content-Sha256=UNSIGNED-PAYLOAD\u0026X-Amz-Credential=AKIATUJCOBWTFSXT22F2%2F20260226%2Fus-east-2%2Fs3%2Faws4_request\u0026X-Amz-Date=20260226T140910Z\u0026X-Amz-Expires=7250\u0026X-Amz-Signature=c11368500c80ff565f301f64b6c150cfd979eb5143d900ca50267def37edcf0d\u0026X-Amz-SignedHeaders=host\u0026response-content-disposition=inline%3B%20filename%3D%22Imagen%20de%20WhatsApp%202025-10-13%20a%20las%2017.50.34_a697c2c8.jpg%22\u0026response-content-type=image%2Fjpeg\u0026x-amz-checksum-mode=ENABLED\u0026x-id=GetObject"
+                     }
+                 ],
+        "Contraseña Nocodb":  "ContactoYaniCoach#23",
+        "CreatedAt":  "2025-09-30 14:44:00+00:00",
+        "UpdatedAt":  "2026-02-13 15:08:44+00:00",
+        "Ventas Cerradas":  0,
+        "Total de Ventas $":  0,
+        "Cantidad de Ventas":  0,
+        "Contactos":  12,
+        "Interacciones":  14,
+        "Leads Asignados (Total)":  12,
+        "Recuperaciones Asignadas":  0,
+        "Total Ventas (Mes Actual)":  0,
+        "Leads Asignados (Hoy)":  0
+    },
+    {
+        "Ticket Promedio":  31.314814814814813,
+        "Id":  2,
+        "Nombre de la Vendedora":  "María del Carmen Vera ",
+        "Email":  "Yanicoach@yaninacoach.com",
+        "Teléfono":  "+34688631258‬",
+        "Usuario del Sistema":  [
+                                    {
+                                        "id":  "usuop2131hhoy62b",
+                                        "email":  "yanicoach@yaninacoach.com",
+                                        "display_name":  null,
+                                        "meta":  null
+                                    }
+                                ],
+        "Estado":  "Activo",
+        "Foto":  [
+                     {
+                         "url":  "https://nocohub-001-prod-app-attachments.s3.us-east-2.amazonaws.com/nc/uploads/2025/10/13/1296d5334ef877109967828862aecc1c71a38045/Imagen de WhatsApp 2025-10-13 a las 17.52.20_52a8709b_bNJap.jpg",
+                         "title":  "Imagen de WhatsApp 2025-10-13 a las 17.52.20_52a8709b.jpg",
+                         "mimetype":  "image/jpeg",
+                         "size":  139953,
+                         "width":  1290,
+                         "height":  1473,
+                         "id":  "atles7iz6alzyymz",
+                         "thumbnails":  "@{tiny=; small=; card_cover=}",
+                         "signedUrl":  "https://nocohub-001-prod-app-attachments.s3.us-east-2.amazonaws.com/nc/uploads/2025/10/13/1296d5334ef877109967828862aecc1c71a38045/Imagen%20de%20WhatsApp%202025-10-13%20a%20las%2017.52.20_52a8709b_bNJap.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256\u0026X-Amz-Content-Sha256=UNSIGNED-PAYLOAD\u0026X-Amz-Credential=AKIATUJCOBWTFSXT22F2%2F20260226%2Fus-east-2%2Fs3%2Faws4_request\u0026X-Amz-Date=20260226T140928Z\u0026X-Amz-Expires=7232\u0026X-Amz-Signature=e92004bca5244f9fa98ed538ed9262ec4784e1c2ea315fa1042147027177a940\u0026X-Amz-SignedHeaders=host\u0026response-content-disposition=inline%3B%20filename%3D%22Imagen%20de%20WhatsApp%202025-10-13%20a%20las%2017.52.20_52a8709b.jpg%22\u0026response-content-type=image%2Fjpeg\u0026x-amz-checksum-mode=ENABLED\u0026x-id=GetObject"
+                     }
+                 ],
+        "Contraseña Nocodb":  "ContactoYaniCoach#231",
+        "CreatedAt":  "2025-10-13 22:26:21+00:00",
+        "UpdatedAt":  "2026-02-12 21:31:50+00:00",
+        "Ventas Cerradas":  54,
+        "Total de Ventas $":  1691,
+        "Cantidad de Ventas":  54,
+        "Contactos":  2406,
+        "Interacciones":  2880,
+        "Leads Asignados (Total)":  2406,
+        "Recuperaciones Asignadas":  0,
+        "Total Ventas (Mes Actual)":  1691,
+        "Leads Asignados (Hoy)":  3
+    },
+    {
+        "Ticket Promedio":  32.26190476190476,
+        "Id":  3,
+        "Nombre de la Vendedora":  "María Beatriz Juzviachik",
+        "Email":  "equipo@yaninacoach.com",
+        "Teléfono":  "3755-417614",
+        "Usuario del Sistema":  [
+                                    {
+                                        "id":  "us7hj35oyx1c6tft",
+                                        "email":  "equipo@yaninacoach.com",
+                                        "display_name":  null,
+                                        "meta":  null
+                                    }
+                                ],
+        "Estado":  "Activo",
+        "Foto":  [
+                     {
+                         "url":  "https://nocohub-001-prod-app-attachments.s3.us-east-2.amazonaws.com/nc/uploads/2025/10/13/1296d5334ef877109967828862aecc1c71a38045/Imagen de WhatsApp 2025-10-13 a las 17.50.49_65acdd2a_couf3.jpg",
+                         "title":  "Imagen de WhatsApp 2025-10-13 a las 17.50.49_65acdd2a.jpg",
+                         "mimetype":  "image/jpeg",
+                         "size":  43117,
+                         "width":  400,
+                         "height":  400,
+                         "id":  "atj4o02q1hlalbol",
+                         "thumbnails":  "@{tiny=; small=; card_cover=}",
+                         "signedUrl":  "https://nocohub-001-prod-app-attachments.s3.us-east-2.amazonaws.com/nc/uploads/2025/10/13/1296d5334ef877109967828862aecc1c71a38045/Imagen%20de%20WhatsApp%202025-10-13%20a%20las%2017.50.49_65acdd2a_couf3.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256\u0026X-Amz-Content-Sha256=UNSIGNED-PAYLOAD\u0026X-Amz-Credential=AKIATUJCOBWTFSXT22F2%2F20260226%2Fus-east-2%2Fs3%2Faws4_request\u0026X-Amz-Date=20260226T140928Z\u0026X-Amz-Expires=7232\u0026X-Amz-Signature=dc3489050fa72a20c77f6d83be725837f99185722dfc1166eea16b3f8f567d26\u0026X-Amz-SignedHeaders=host\u0026response-content-disposition=inline%3B%20filename%3D%22Imagen%20de%20WhatsApp%202025-10-13%20a%20las%2017.50.49_65acdd2a.jpg%22\u0026response-content-type=image%2Fjpeg\u0026x-amz-checksum-mode=ENABLED\u0026x-id=GetObject"
+                     }
+                 ],
+        "Contraseña Nocodb":  "ContactoYaniCoach#232",
+        "CreatedAt":  "2025-10-13 22:26:22+00:00",
+        "UpdatedAt":  "2026-02-09 23:43:26+00:00",
+        "Ventas Cerradas":  42,
+        "Total de Ventas $":  1355,
+        "Cantidad de Ventas":  42,
+        "Contactos":  2096,
+        "Interacciones":  2741,
+        "Leads Asignados (Total)":  2096,
+        "Recuperaciones Asignadas":  0,
+        "Total Ventas (Mes Actual)":  1355,
+        "Leads Asignados (Hoy)":  2
+    }
+]

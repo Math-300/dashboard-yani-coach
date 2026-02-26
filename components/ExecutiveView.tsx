@@ -4,7 +4,8 @@ import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
 import KPICard from './KPICard';
-import { Contact, Sale } from '../types';
+import { Contact, Sale, KpiCounts } from '../types';
+import { FunnelCounts } from '../services/noco';
 import {
     calculateTotalLeadsInPipeline,
     calculateNewLeadsToday,
@@ -12,13 +13,47 @@ import {
     calculateConversionRate,
     calculateUrgentFollowUps,
     calculatePipelineValue,
-    calculateFunnelByStatus,
     formatCurrency,
     FunnelStep
 } from '../services/metricsCalculator';
 
+/**
+ * ⚡ Construye el embudo desde conteos pre-calculados del servidor.
+ * Agrupa los estados detallados de NocoDB en las 5 categorías del embudo.
+ */
+const buildFunnelFromCounts = (counts: FunnelCounts): FunnelStep[] => {
+    const newCount = (counts['Lead Nuevo'] || 0);
+    const followUpCount = (counts['En Seguimiento 24 hs después primer contacto'] || 0)
+        + (counts['En Seguimiento 7 días'] || 0)
+        + (counts['Seguimiento Cliente Nuevo'] || 0)
+        + (counts['Seguimiento venta perdida'] || 0)
+        + (counts['Seguimiento leads sin respuesta'] || 0)
+        + (counts['Seguimiento Potencial venta'] || 0)
+        + (counts['Contactar en 48 horas'] || 0)
+        + (counts['Nutrición a Largo Plazo'] || 0)
+        + (counts['No se presentó'] || 0);
+    const interestedCount = (counts['Llamada Agendada'] || 0);
+    const wonCount = (counts['Venta Ganada'] || 0);
+    const lostCount = (counts['Venta Perdida'] || 0)
+        + (counts['Leads perdidos (que nunca contestaron)'] || 0)
+        + (counts['no contactar'] || 0);
+
+    const total = newCount + followUpCount + interestedCount + wonCount + lostCount;
+    const pct = (n: number) => total > 0 ? Math.round((n / total) * 100) : 0;
+
+    return [
+        { status: 'Lead Nuevo', count: newCount, percentage: pct(newCount) },
+        { status: 'En Seguimiento', count: followUpCount, percentage: pct(followUpCount) },
+        { status: 'Interesado', count: interestedCount, percentage: pct(interestedCount) },
+        { status: 'Venta Cerrada', count: wonCount, percentage: pct(wonCount) },
+        { status: 'Venta Perdida', count: lostCount, percentage: pct(lostCount) },
+    ];
+};
+
 interface ExecutiveViewProps {
     contacts: Contact[];
+    funnelCounts: FunnelCounts;
+    kpiCounts: KpiCounts;
     sales: Sale[];
     dateRange: { start: Date; end: Date };
     isDarkMode: boolean;
@@ -32,6 +67,8 @@ interface ExecutiveViewProps {
  */
 const ExecutiveView: React.FC<ExecutiveViewProps> = ({
     contacts,
+    funnelCounts,
+    kpiCounts,
     sales,
     dateRange,
     isDarkMode
@@ -45,30 +82,30 @@ const ExecutiveView: React.FC<ExecutiveViewProps> = ({
 
     // Colores para cada estado del embudo
     const statusColors: Record<string, string> = {
-        'Lead Nuevo': '#16a34a',           // Verde
-        'En Seguimiento': '#2563eb',       // Azul
-        'Interesado': '#d97706',           // Amber
-        'Venta Cerrada': '#059669',        // Verde oscuro (éxito)
-        'Venta Perdida': '#dc2626'         // Rojo
+        'Lead Nuevo': '#16a34a',
+        'En Seguimiento': '#2563eb',
+        'Interesado': '#d97706',
+        'Venta Cerrada': '#059669',
+        'Venta Perdida': '#dc2626'
     };
 
-    // Calcular todas las métricas
-    // ✅ Usar contactos filtrados por fecha para que TODO respete el rango seleccionado
+    // Calcular métricas
     const metrics = useMemo(() => {
-        // Leads en pipeline: usar contactos filtrados
-        const totalLeadsInPipeline = calculateTotalLeadsInPipeline(contacts);
-        // Leads nuevos hoy: usar contactos filtrados por fecha
-        const newLeadsToday = calculateNewLeadsToday(contacts, dateRange);
-        // Ventas del mes: usar sales filtradas
+        // Leads en pipeline: calcular desde conteos del embudo
+        const totalLeadsInPipeline = calculateTotalLeadsInPipeline(funnelCounts);
+        // Leads nuevos: conteo pre-calculado
+        const newLeadsToday = calculateNewLeadsToday(kpiCounts.newLeads);
+        // Ventas del período (monto) con datos filtrados
         const monthlySales = calculateMonthlySales(sales, dateRange);
-        // Tasa de conversión: calcular sobre contactos filtrados
-        const conversionRate = calculateConversionRate(contacts, dateRange);
-        // Seguimientos urgentes: usar contactos filtrados
-        const urgentFollowUps = calculateUrgentFollowUps(contacts);
-        // Valor del pipeline: usar contactos filtrados
+        // Tasa de conversión: ventas / leads creados
+        const conversionRate = calculateConversionRate(kpiCounts.leadsCreated, kpiCounts.salesCount);
+        // Seguimientos urgentes: conteo pre-calculado
+        const urgentFollowUps = calculateUrgentFollowUps(kpiCounts.urgentFollowUps);
+        // Valor del pipeline
         const pipelineValue = calculatePipelineValue(contacts);
-        // Embudo: usar contactos filtrados
-        const funnelData = calculateFunnelByStatus(contacts);
+
+        // ⚡ Embudo: Usar conteos pre-calculados del servidor
+        const funnelData = buildFunnelFromCounts(funnelCounts);
 
         return {
             totalLeadsInPipeline,
@@ -79,7 +116,7 @@ const ExecutiveView: React.FC<ExecutiveViewProps> = ({
             pipelineValue,
             funnelData
         };
-    }, [contacts, sales, dateRange]);
+    }, [contacts, funnelCounts, kpiCounts, sales, dateRange]);
 
     // Preparar datos para el gráfico de embudo con mínimo visible
     const chartData = useMemo(() => {

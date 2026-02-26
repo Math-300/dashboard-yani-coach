@@ -5,35 +5,53 @@ import {
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import KPICard from './KPICard';
-import { Contact, Interaction } from '../types';
+import { Contact, Interaction, KpiCounts } from '../types';
+import { FunnelCounts } from '../services/noco';
 import {
-    calculateLeadsByStatus,
     calculateLostReasons,
     calculateLeadsBySource,
     calculateLeadsByCountry,
-    calculateInteractionsByChannel,
     calculateInteractionResults,
     calculateAvgInteractionsPerLead,
     calculateTotalLeadsInPipeline,
     calculateLostLeads,
-    calculateTotalInteractions
 } from '../services/metricsCalculator';
 
 interface PipelineViewProps {
     contacts: Contact[];
+    funnelCounts: FunnelCounts;
+    interactionCounts: Record<string, number>;
+    kpiCounts: KpiCounts;
     interactions: Interaction[];
     dateRange: { start: Date; end: Date };
     isDarkMode: boolean;
 }
 
 /**
+ * ⚡ Construye la distribución de leads por estado desde conteos pre-calculados.
+ */
+const buildLeadsByStatus = (counts: FunnelCounts): { status: string; count: number; percentage: number }[] => {
+    // Usar todos los estados detallados de NocoDB
+    const entries = Object.entries(counts)
+        .filter(([_, count]) => count > 0)
+        .map(([status, count]) => ({ status, count, percentage: 0 }))
+        .sort((a, b) => b.count - a.count);
+
+    const total = entries.reduce((sum, e) => sum + e.count, 0);
+    return entries.map(e => ({
+        ...e,
+        percentage: total > 0 ? Math.round((e.count / total) * 100) : 0
+    }));
+};
+
+/**
  * Vista de Pipeline & Actividad
- * 
- * Muestra KPIs del pipeline, distribución de leads por estado,
- * análisis de motivos de venta perdida y gráficos de actividad.
  */
 const PipelineView: React.FC<PipelineViewProps> = ({
     contacts,
+    funnelCounts,
+    interactionCounts,
+    kpiCounts,
     interactions,
     dateRange,
     isDarkMode
@@ -49,17 +67,26 @@ const PipelineView: React.FC<PipelineViewProps> = ({
     const GOLD_COLORS = ['#D4AF37', '#B8860B', '#FFD700', '#FFA500', '#CD853F', '#DAA520', '#F0E68C'];
     const RESULT_COLORS = ['#D4AF37', '#22C55E', '#EF4444', '#3B82F6', '#8B5CF6', '#F59E0B'];
 
-    // Calcular todas las métricas
+    // Calcular métricas
     const metrics = useMemo(() => {
-        const leadsInPipeline = calculateTotalLeadsInPipeline(contacts);
+        const leadsInPipeline = calculateTotalLeadsInPipeline(funnelCounts);
         const lostLeadsCount = calculateLostLeads(contacts);
-        const totalInteractions = calculateTotalInteractions(interactions, dateRange);
-        const avgInteractions = calculateAvgInteractionsPerLead(contacts, interactions);
-        const leadsByStatus = calculateLeadsByStatus(contacts);
+        const totalInteractions = interactionCounts['total'] || interactions.length;
+        const avgInteractions = calculateAvgInteractionsPerLead(leadsInPipeline, totalInteractions);
+        // ⚡ Distribución de leads: desde conteos pre-calculados del servidor
+        const leadsByStatus = buildLeadsByStatus(funnelCounts);
         const lostReasons = calculateLostReasons(contacts);
         const leadsBySource = calculateLeadsBySource(contacts);
         const leadsByCountry = calculateLeadsByCountry(contacts);
-        const interactionsByChannel = calculateInteractionsByChannel(interactions);
+        // ⚡ Interacciones por canal: desde conteos pre-calculados
+        const interactionsByChannel = Object.entries(interactionCounts)
+            .filter(([key]) => key !== 'total')
+            .map(([channel, cnt]) => {
+                const t = Number(interactionCounts['total']) || 1;
+                const c = Number(cnt);
+                return { channel, count: c, percentage: Math.round((c / t) * 100) };
+            })
+            .sort((a, b) => a.count - b.count);
         const interactionResults = calculateInteractionResults(interactions);
 
         return {
@@ -74,7 +101,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({
             interactionsByChannel,
             interactionResults
         };
-    }, [contacts, interactions, dateRange]);
+    }, [contacts, funnelCounts, interactionCounts, kpiCounts, interactions, dateRange]);
 
     // Datos ordenados para gráficos
     const pipelineChartData = useMemo(() => {
