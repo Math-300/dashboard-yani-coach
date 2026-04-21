@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import KPICard from './KPICard';
 import { Contact, Interaction, KpiCounts } from '../types';
-import { FunnelCounts } from '../services/noco';
+import { FunnelCounts } from '../services/types';
 import {
     calculateLostReasons,
     calculateLeadsBySource,
@@ -468,7 +468,7 @@ const PipelineView: React.FC<PipelineViewProps> = ({
                         Resultado de Interacciones
                     </h3>
                     <div className="w-full h-[300px]">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" minHeight={200} minWidth={0} debounce={200}>
                             <PieChart>
                                 <Pie
                                     data={metrics.interactionResults}

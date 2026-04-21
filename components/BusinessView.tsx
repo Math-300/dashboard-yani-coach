@@ -6,7 +6,7 @@ import {
 import { DollarSign, ShoppingCart, Percent, Users, Clock, Zap, TrendingUp, Layers, Activity } from 'lucide-react';
 import KPICard from './KPICard';
 import { Sale, Contact, Interaction, PurchaseAttempt, LeadStatus, InteractionType } from '../types';
-import { isDateInRange } from '../services/noco';
+import { isDateInRange } from '../services/dateUtils';
 
 interface BusinessViewProps {
   sales: Sale[];
@@ -277,7 +277,7 @@ const BusinessView: React.FC<BusinessViewProps> = ({ sales, contacts, interactio
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Salud de Leads (Antigüedad)</h3>
           <div className="h-64 w-full" style={{ minHeight: '256px' }}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minHeight={200} minWidth={0} debounce={200}>
               <BarChart data={agingData} layout="vertical" margin={{ left: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={gridColor} />
                 <XAxis type="number" hide />
@@ -298,7 +298,7 @@ const BusinessView: React.FC<BusinessViewProps> = ({ sales, contacts, interactio
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Efectividad por Canal</h3>
           <div className="h-64 w-full" style={{ minHeight: '256px' }}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minHeight={200} minWidth={0} debounce={200}>
               <RadarChart cx="50%" cy="50%" outerRadius="80%" data={channelData}>
                 <PolarGrid stroke={gridColor} />
                 <PolarAngleAxis dataKey="subject" tick={{ fill: axisColor }} />
@@ -315,7 +315,7 @@ const BusinessView: React.FC<BusinessViewProps> = ({ sales, contacts, interactio
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Mix de Productos</h3>
           <div className="h-64 w-full flex justify-center" style={{ minHeight: '256px' }}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minHeight={200} minWidth={0} debounce={200}>
               <PieChart>
                 <Pie data={pieData} innerRadius={50} outerRadius={80} paddingAngle={5} dataKey="value">
                   {pieData.map((entry, index) => (
@@ -335,7 +335,7 @@ const BusinessView: React.FC<BusinessViewProps> = ({ sales, contacts, interactio
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Embudo de Conversión</h3>
           <div className="h-80 w-full" style={{ minHeight: '320px' }}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minHeight={200} minWidth={0} debounce={200}>
               <BarChart layout="vertical" data={funnelData} margin={{ top: 20, right: 30, left: 40, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={gridColor} />
                 <XAxis type="number" hide />
@@ -353,7 +353,7 @@ const BusinessView: React.FC<BusinessViewProps> = ({ sales, contacts, interactio
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Evolución de Ventas</h3>
           <div className="h-80 w-full" style={{ minHeight: '320px' }}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minHeight={200} minWidth={0} debounce={200}>
               <AreaChart data={salesEvolutionData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                 <defs>
                   <linearGradient id="colorGold" x1="0" y1="0" x2="0" y2="1">

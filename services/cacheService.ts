@@ -13,11 +13,15 @@
 import React from 'react';
 import { Seller, Contact, Interaction, Sale, PurchaseAttempt, KpiCounts } from '../types';
 import {
-    getRealSellers, getRealSales, getRealContacts, getRealInteractions,
-    getRealAttempts, getSummaryMetrics,
-    DateRange, FunnelCounts
-} from './noco';
-import { isApiConfigured, NOCODB_CONFIG } from '../config';
+    getSellers as getRealSellers,
+    getSales as getRealSales,
+    getContacts as getRealContacts,
+    getInteractions as getRealInteractions,
+    getAttempts as getRealAttempts,
+    getSummaryMetrics,
+} from './dataSource';
+import type { DateRange, FunnelCounts } from './types';
+import { NOCODB_CONFIG } from '../config';
 
 // Tipos para el caché
 export interface CachedData {
@@ -30,7 +34,6 @@ export interface CachedData {
     sales: Sale[];
     attempts: PurchaseAttempt[];
     timestamp: number;
-    isDemo: boolean;
     dateRange?: DateRange | null;
 }
 
@@ -39,7 +42,6 @@ interface CacheState {
     isLoading: boolean;
     error: Error | null;
     lastFetch: number | null;
-    isNetworkError: boolean;
     currentDateRange?: DateRange | null;
 }
 
@@ -57,7 +59,6 @@ let cacheState: CacheState = {
     isLoading: false,
     error: null,
     lastFetch: null,
-    isNetworkError: false,
 };
 
 // Suscriptores para notificar cambios
@@ -74,17 +75,6 @@ export const subscribe = (callback: Subscriber) => {
 };
 
 export const getCacheState = () => cacheState;
-
-/**
- * Helper para detectar errores de red
- */
-const isNetworkError = (error: unknown): boolean => {
-    if (error instanceof Error) {
-        const msg = error.message.toLowerCase();
-        return msg.includes('network') || msg.includes('timeout') || msg.includes('failed to fetch') || msg.includes('abort');
-    }
-    return false;
-};
 
 /**
  * Helper para crear promesas con timeout
@@ -111,29 +101,7 @@ const withTimeout = <T>(promise: Promise<T>, timeoutMs: number): Promise<T> => {
  * Total: ~25-30 requests (antes: ~386)
  */
 async function fetchAllData(dateRange?: DateRange | null, existingData?: CachedData | null): Promise<CachedData> {
-    const isDemo = !isApiConfigured();
     const shouldReuseSummary = !dateRange || (existingData?.dateRange && isSameDateRange(existingData.dateRange, dateRange));
-
-    if (isDemo) {
-        return {
-            sellers: [],
-            contacts: [],
-            funnelCounts: {},
-            interactions: [],
-            interactionCounts: {},
-            kpiCounts: {
-                leadsCreated: 0,
-                newLeads: 0,
-                urgentFollowUps: 0,
-                salesCount: 0
-            },
-            sales: [],
-            attempts: [],
-            timestamp: Date.now(),
-            isDemo: true,
-            dateRange: dateRange || null,
-        };
-    }
 
     if (NOCODB_CONFIG.DEBUG && dateRange) {
         console.log(`[Cache] Filtro: ${dateRange.start.toISOString().split('T')[0]} a ${dateRange.end.toISOString().split('T')[0]}`);
@@ -204,7 +172,6 @@ async function fetchAllData(dateRange?: DateRange | null, existingData?: CachedD
         sales,
         attempts,
         timestamp: Date.now(),
-        isDemo: false,
         dateRange: dateRange || null,
     };
 }
@@ -217,30 +184,18 @@ export const invalidateCache = async (dateRange?: DateRange | null) => {
         ...cacheState,
         isLoading: true,
         error: null,
-        isNetworkError: false,
         currentDateRange: dateRange || null,
     };
     notifySubscribers();
 
-    try {
-        const data = await withTimeout(fetchAllData(dateRange, cacheState.data), CACHE_CONFIG.REQUEST_TIMEOUT * 6);
-        cacheState = {
-            data,
-            isLoading: false,
-            error: null,
-            lastFetch: Date.now(),
-            isNetworkError: false,
-            currentDateRange: dateRange || null,
-        };
-    } catch (error) {
-        const networkError = isNetworkError(error);
-        cacheState = {
-            ...cacheState,
-            isLoading: false,
-            error: error instanceof Error ? error : new Error('Error desconocido'),
-            isNetworkError: networkError,
-        };
-    }
+    const data = await withTimeout(fetchAllData(dateRange, cacheState.data), CACHE_CONFIG.REQUEST_TIMEOUT * 6);
+    cacheState = {
+        data,
+        isLoading: false,
+        error: null,
+        lastFetch: Date.now(),
+        currentDateRange: dateRange || null,
+    };
 
     notifySubscribers();
 };
@@ -295,12 +250,9 @@ const revalidateInBackground = async (dateRange?: DateRange | null) => {
                 isLoading: false,
                 error: null,
                 lastFetch: Date.now(),
-                isNetworkError: false,
                 currentDateRange: dateRange || null,
             };
             notifySubscribers();
-        } catch (error) {
-            if (NOCODB_CONFIG.DEBUG) console.error('[Cache] Error en revalidación:', error);
         } finally {
             revalidationPromise = null;
         }

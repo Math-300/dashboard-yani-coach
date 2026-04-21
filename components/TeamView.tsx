@@ -3,7 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 import { Seller, Interaction, Sale, Contact, InteractionType, LeadStatus } from '../types';
-import { isDateInRange } from '../services/noco';
+import { isDateInRange } from '../services/dateUtils';
 
 interface TeamViewProps {
   sellers: Seller[];
@@ -245,7 +245,7 @@ const TeamView: React.FC<TeamViewProps> = ({ sellers, interactions, sales, conta
         <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 transition-colors duration-300">
           <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Actividad por Asesora</h3>
           <div className="h-80" style={{ minHeight: '320px' }}>
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minHeight={200} minWidth={0} debounce={200}>
               <BarChart
                 data={activityData}
                 margin={{ top: 20, right: 30, left: 20, bottom: 5 }}

@@ -1,11 +1,9 @@
 /**
  * Hook personalizado para manejar datos del Dashboard con caché integrado
- * 
- * ⚡ OPTIMIZADO: Usa micro-fetching.
- * - Carga datos una sola vez al iniciar
- * - Filtrado por fecha en el servidor
- * - Revalidación automática en background
- * - Expone funnelCounts (conteos por estado) en lugar de 27K registros
+ *
+ * - Carga datos una sola vez al montar y re-carga al cambiar el rango de fechas
+ * - Dedup para el double-mount de React StrictMode (loadingRef por key de rango)
+ * - Filtrado por fecha en el servidor; conteos pre-calculados
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -18,37 +16,26 @@ import {
     getCacheState,
     CachedData
 } from '../services/cacheService';
-import { DateRange, FunnelCounts } from '../services/noco';
+import { DateRange, FunnelCounts } from '../services/types';
 
 interface UseDashboardDataResult {
-    // Datos filtrados por fecha
     contacts: Contact[];
     interactions: Interaction[];
     sales: Sale[];
     attempts: PurchaseAttempt[];
     sellers: Seller[];
 
-    // ⚡ Conteos pre-calculados (sin descargar 27K registros)
     funnelCounts: FunnelCounts;
     interactionCounts: Record<string, number>;
     kpiCounts: KpiCounts;
 
-    // Estados
     isLoading: boolean;
-    isDemo: boolean;
     error: Error | null;
-    isNetworkError: boolean;
 
-    // Acciones
     refresh: () => Promise<void>;
     isInitialLoad: boolean;
 }
 
-/**
- * Hook para obtener y filtrar datos del dashboard
- * @param startDate - Fecha de inicio del filtro
- * @param endDate - Fecha de fin del filtro
- */
 export function useDashboardData(
     startDate: Date,
     endDate: Date
@@ -74,12 +61,11 @@ export function useDashboardData(
         urgentFollowUps: 0,
         salesCount: 0
     });
-    const [isDemo, setIsDemo] = useState(false);
     const [error, setError] = useState<Error | null>(null);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
-    const [isNetworkError, setIsNetworkError] = useState(false);
 
     const mountedRef = useRef(true);
+    const loadingRef = useRef<{ key: string; promise: Promise<void> } | null>(null);
 
     useEffect(() => {
         mountedRef.current = true;
@@ -87,8 +73,8 @@ export function useDashboardData(
     }, []);
 
     const applyDataToState = useCallback((cachedData: CachedData) => {
+        if (!mountedRef.current) return;
         setSellers(cachedData.sellers);
-        setIsDemo(cachedData.isDemo);
         setFunnelCounts(cachedData.funnelCounts || {});
         setInteractionCounts(cachedData.interactionCounts || {});
         setKpiCounts(cachedData.kpiCounts || {
@@ -102,32 +88,10 @@ export function useDashboardData(
         setFilteredData(filtered);
     }, [startDate, endDate]);
 
-    // Carga inicial
-    const loadInitialData = useCallback(async () => {
-        try {
-            const dateRange: DateRange = { start: startDate, end: endDate };
-            const cachedData = await getData(false, dateRange);
-            if (!mountedRef.current) return;
-
-            if (cachedData) {
-                applyDataToState(cachedData);
-                setIsInitialLoad(false);
-                setIsNetworkError(false);
-            }
-        } catch (err) {
-            if (mountedRef.current) {
-                setError(err instanceof Error ? err : new Error('Error cargando datos'));
-                setIsInitialLoad(false);
-                setIsNetworkError(getCacheState().isNetworkError);
-            }
-        }
-    }, [startDate, endDate, applyDataToState]);
-
-    // Refresh manual
     const refresh = useCallback(async () => {
+        if (!mountedRef.current) return;
         setIsInitialLoad(true);
         setError(null);
-        setIsNetworkError(false);
 
         try {
             const dateRange: DateRange = { start: startDate, end: endDate };
@@ -139,42 +103,59 @@ export function useDashboardData(
             }
         } catch (err) {
             if (mountedRef.current) {
-                setError(err instanceof Error ? err : new Error('Error refrescando datos'));
-                setIsNetworkError(getCacheState().isNetworkError);
+                const e = err instanceof Error ? err : new Error('Error refrescando datos');
+                console.error('[Dashboard] Fallo refrescando datos:', e);
+                setError(e);
             }
         } finally {
             if (mountedRef.current) setIsInitialLoad(false);
         }
     }, [startDate, endDate, applyDataToState]);
 
-    // Effect 1: Carga inicial
+    // Effect principal: carga al montar y re-carga al cambiar fechas, dedupeado
     useEffect(() => {
-        loadInitialData();
-    }, [loadInitialData]);
+        const key = `${startDate.getTime()}-${endDate.getTime()}`;
 
-    // Effect 2: Suscripción al caché
+        // StrictMode / re-render rápido con la misma key: reutilizar la promesa
+        if (loadingRef.current?.key === key) return;
+
+        if (mountedRef.current) {
+            setIsInitialLoad(true);
+            setError(null);
+        }
+
+        const promise = (async () => {
+            try {
+                const dateRange: DateRange = { start: startDate, end: endDate };
+                const cachedData = await getData(false, dateRange);
+                if (!mountedRef.current) return;
+                if (cachedData) applyDataToState(cachedData);
+            } catch (err) {
+                if (!mountedRef.current) return;
+                const e = err instanceof Error ? err : new Error('Error cargando datos');
+                console.error('[Dashboard] Fallo cargando datos:', e);
+                setError(e);
+            } finally {
+                if (mountedRef.current) setIsInitialLoad(false);
+                if (loadingRef.current?.key === key) loadingRef.current = null;
+            }
+        })();
+
+        loadingRef.current = { key, promise };
+    }, [startDate, endDate, applyDataToState]);
+
+    // Effect: suscripción al caché para revalidaciones en background
     useEffect(() => {
         const unsubscribe = subscribe((state) => {
             if (!mountedRef.current) return;
-            if (state.data) {
-                applyDataToState(state.data);
-            }
+            if (state.data) applyDataToState(state.data);
             if (state.error) {
+                console.error('[Dashboard] Error en caché:', state.error);
                 setError(state.error);
-                setIsNetworkError(state.isNetworkError);
             }
         });
         return unsubscribe;
     }, [applyDataToState]);
-
-    // Effect 3: Recarga cuando cambian las fechas
-    useEffect(() => {
-        if (!isInitialLoad) {
-            setIsInitialLoad(true);
-            const dateRange: DateRange = { start: startDate, end: endDate };
-            invalidateCache(dateRange);
-        }
-    }, [startDate, endDate]);
 
     const cacheState = getCacheState();
     const isLoading = cacheState.isLoading && isInitialLoad;
@@ -186,9 +167,7 @@ export function useDashboardData(
         interactionCounts,
         kpiCounts,
         isLoading,
-        isDemo,
         error,
-        isNetworkError,
         refresh,
         isInitialLoad,
     };

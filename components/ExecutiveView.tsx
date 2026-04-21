@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import KPICard from './KPICard';
 import { Contact, Sale, KpiCounts } from '../types';
-import { FunnelCounts } from '../services/noco';
+import { FunnelCounts } from '../services/types';
 import {
     calculateTotalLeadsInPipeline,
     calculateNewLeadsToday,
@@ -214,18 +214,28 @@ const ExecutiveView: React.FC<ExecutiveViewProps> = ({
                 {/* KPI 4: Tasa de Conversión */}
                 <KPICard
                     title="Tasa de Conversión"
-                    value={`${metrics.conversionRate}%`}
+                    value={metrics.conversionRate === null ? '—' : `${metrics.conversionRate}%`}
                     icon={<TrendingUp className="w-6 h-6" />}
                     colorClass={
-                        metrics.conversionRate >= 50
-                            ? "bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
-                            : metrics.conversionRate >= 30
-                                ? "bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
-                                : "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                        metrics.conversionRate === null
+                            ? "bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+                            : metrics.conversionRate >= 50
+                                ? "bg-green-50 text-green-600 dark:bg-green-900/30 dark:text-green-400"
+                                : metrics.conversionRate >= 30
+                                    ? "bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
+                                    : "bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400"
                     }
-                    trend={metrics.conversionRate >= 50 ? 'up' : metrics.conversionRate >= 30 ? 'neutral' : 'down'}
-                    trendValue={`${metrics.conversionRate}% de efectividad`}
-                    tooltip="Porcentaje de leads que se convirtieron en ventas cerradas. Fórmula: (Ganados / (Ganados + Perdidos)) × 100"
+                    trend={
+                        metrics.conversionRate === null
+                            ? 'neutral'
+                            : metrics.conversionRate >= 50 ? 'up' : metrics.conversionRate >= 30 ? 'neutral' : 'down'
+                    }
+                    trendValue={
+                        metrics.conversionRate === null
+                            ? 'Sin leads en el período'
+                            : `${metrics.conversionRate}% de efectividad`
+                    }
+                    tooltip="Porcentaje de leads creados en el período que se convirtieron en venta. Si no hay leads creados en el período, se muestra — (no es calculable)."
                 />
 
                 {/* KPI 5: Seguimientos Urgentes */}
@@ -349,11 +359,13 @@ const ExecutiveView: React.FC<ExecutiveViewProps> = ({
                             Análisis Rápido
                         </h4>
                         <p className="text-sm text-gold-600/80 dark:text-gold-400/80 mt-1">
-                            {metrics.conversionRate >= 50
-                                ? `¡Excelente! Tu tasa de conversión del ${metrics.conversionRate}% está por encima del promedio de la industria (30-40%).`
-                                : metrics.conversionRate >= 30
-                                    ? `Tu tasa de conversión del ${metrics.conversionRate}% está en el rango promedio de la industria.`
-                                    : `Tu tasa de conversión del ${metrics.conversionRate}% está por debajo del promedio. Considera revisar tu proceso de seguimiento.`
+                            {metrics.conversionRate === null
+                                ? `No hay leads creados en el período seleccionado, así que no se puede calcular tasa de conversión.`
+                                : metrics.conversionRate >= 50
+                                    ? `¡Excelente! Tu tasa de conversión del ${metrics.conversionRate}% está por encima del promedio de la industria (30-40%).`
+                                    : metrics.conversionRate >= 30
+                                        ? `Tu tasa de conversión del ${metrics.conversionRate}% está en el rango promedio de la industria.`
+                                        : `Tu tasa de conversión del ${metrics.conversionRate}% está por debajo del promedio. Considera revisar tu proceso de seguimiento.`
                             }
                             {metrics.urgentFollowUps > 0 && (
                                 <span className="block mt-2 text-amber-600 dark:text-amber-400">

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { LayoutDashboard, Info, BarChart3, DollarSign, UserCheck, GitBranch, RefreshCw, AlertTriangle, MessageCircle, X } from 'lucide-react';
+import { LayoutDashboard, BarChart3, DollarSign, UserCheck, GitBranch, RefreshCw, MessageCircle, X } from 'lucide-react';
 import ExecutiveView from './components/ExecutiveView';
 import SalesView from './components/SalesView';
 import PerformanceView from './components/PerformanceView';
@@ -12,6 +12,7 @@ import { AuthProvider, useAuth } from './auth/AuthContext';
 import AuthGuard from './auth/AuthGuard';
 import LoginView from './components/LoginView';
 import { logout } from './services/authService';
+import { loadInitialRange, savePresetSelection, type DateRangePreset } from './services/dateUtils';
 
 function DashboardShell() {
   const [activeTab, setActiveTab] = useState<'executive' | 'sales' | 'performance' | 'pipeline' | 'assistant'>('executive');
@@ -21,14 +22,8 @@ function DashboardShell() {
   // Force Dark Mode always
   const isDarkMode = true;
 
-  // Initialize Dates: Default to "TODAY"
-  const [dateRange, setDateRange] = useState<{ start: Date, end: Date }>(() => {
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-    const end = new Date();
-    end.setHours(23, 59, 59, 999);
-    return { start, end };
-  });
+  // Initialize Dates: preset persistido en localStorage, default = "Últimos 30 días"
+  const [dateRange, setDateRange] = useState<{ start: Date, end: Date }>(() => loadInitialRange().range);
 
   // ✅ NUEVO: Usar hook con caché integrado
   // Los datos se cargan UNA sola vez y el filtrado es en el cliente
@@ -42,15 +37,14 @@ function DashboardShell() {
     attempts,
     sellers,
     isLoading,
-    isDemo,
     error,
-    isNetworkError,
     refresh,
     isInitialLoad
   } = useDashboardData(dateRange.start, dateRange.end);
 
-  const handleDateChange = (start: Date, end: Date) => {
+  const handleDateChange = (start: Date, end: Date, preset: DateRangePreset = 'custom') => {
     setDateRange({ start, end });
+    savePresetSelection(preset, { start, end });
   };
 
 
@@ -172,58 +166,24 @@ function DashboardShell() {
         {/* Main Content Area */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-          {/* Error Banner */}
-          {error && (
-            <div className="mb-6 bg-red-900/20 border border-red-800/50 rounded-lg p-4 flex items-start space-x-3">
-              <AlertTriangle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
-              <div className="flex-1">
-                <h4 className="text-sm font-semibold text-red-200">
-                  {isNetworkError ? 'Error de conexión' : 'Error al cargar datos'}
-                </h4>
-                <p className="text-xs text-red-200/70 mt-1">
-                  {isNetworkError
-                    ? 'No se pudo conectar con el servidor. Verifica tu conexión a internet e intenta nuevamente.'
-                    : error.message
-                  }
-                </p>
-                {isNetworkError && (
-                  <button
-                    onClick={refresh}
-                    disabled={isLoading}
-                    className="mt-3 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:bg-red-600/50 text-white text-sm font-medium rounded-lg transition-colors flex items-center space-x-2"
-                  >
-                    <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                    <span>Reintentar</span>
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Demo Mode Banner */}
-          {isDemo && !isLoading && (
-            <div className="mb-6 bg-gold-900/20 border border-gold-800/50 rounded-lg p-3 flex items-start space-x-3">
-              <Info className="w-5 h-5 text-gold-400 mt-0.5" />
-              <div>
-                <h4 className="text-sm font-semibold text-gold-200">Modo de Demostración Activo</h4>
-                <p className="text-xs text-gold-200/70">
-                  Estás viendo datos generados automáticamente porque no se detectó conexión a NocoDB.
-                  Para ver datos reales, configura <code>VITE_NOCODB_TOKEN</code> y <code>VITE_NOCODB_URL</code> en tus variables de entorno.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Loading State - Solo mostrar en carga inicial si no hay error */}
-          {isInitialLoad && !error ? (
+          {/* Loading inicial */}
+          {isInitialLoad ? (
             <div className="flex flex-col justify-center items-center h-64 space-y-4">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold-500"></div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Cargando datos desde NocoDB...</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Cargando datos desde NocoDB…</p>
             </div>
-          ) : error && isInitialLoad ? (
-            // Si hay error durante la carga inicial, mostrar placeholder vacío
-            <div className="flex flex-col justify-center items-center h-64">
-              <p className="text-sm text-gray-500 dark:text-gray-400">No hay datos disponibles</p>
+          ) : error ? (
+            <div className="flex flex-col justify-center items-center h-64 space-y-3">
+              <p className="text-sm text-gray-300">No se pudieron cargar los datos.</p>
+              <p className="text-xs text-gray-500">Detalle: {error.message}</p>
+              <button
+                onClick={refresh}
+                disabled={isLoading}
+                className="px-4 py-2 rounded-lg bg-gold-500/80 hover:bg-gold-500 disabled:opacity-50 text-sm text-black font-medium flex items-center gap-2"
+              >
+                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                Reintentar
+              </button>
             </div>
           ) : (
             <div className="animate-fade-in-up">
