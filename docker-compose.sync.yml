@@ -51,7 +51,8 @@ services:
         reservations:
           memory: 128M
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000/health"]
+      # node:20-alpine no trae wget/curl. Usamos el propio node para chequear.
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', r => r.statusCode===200?process.exit(0):process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3
