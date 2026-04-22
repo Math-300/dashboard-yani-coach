@@ -7,22 +7,29 @@ version: "3.8"
 #
 # El servicio corre en la overlay `Yanicoach` (misma que n8n).
 # n8n_worker lo alcanza por DNS interno: http://yani_dashboard_sync:3000
+#
+# Las variables `VITE_*` se usan también en dev local del Dashboard (Vite carga
+# .env.local). Acá se re-usan los mismos nombres para no duplicar convenciones.
 
 services:
   yani_dashboard_sync:
     image: yani-dashboard-sync:local
     environment:
-      # NocoDB (origen)
-      NOCO_API_KEY: "${NOCO_API_KEY:?set NOCO_API_KEY}"
-      NOCO_BASE_URL: "${NOCO_BASE_URL:-https://app.nocodb.com}"
-      NOCO_BASE_ID: "${NOCO_BASE_ID:?set NOCO_BASE_ID}"
+      # NocoDB (origen) — nombres obligatorios según scripts/sync/env.ts
+      VITE_NOCODB_URL: "${VITE_NOCODB_URL:-https://app.nocodb.com}"
+      VITE_NOCODB_TOKEN: "${VITE_NOCODB_TOKEN:?set VITE_NOCODB_TOKEN}"
+
+      # IDs de tabla NocoDB (opcionales — tienen defaults razonables en env.ts)
+      VITE_TABLE_SELLERS: "${VITE_TABLE_SELLERS:-me6kwgo0qvg0aug}"
+      VITE_TABLE_CONTACTS: "${VITE_TABLE_CONTACTS:-mrwhtwissgz1xzr}"
+      VITE_TABLE_INTERACTIONS: "${VITE_TABLE_INTERACTIONS:-m6gx25reozjbbt3}"
+      VITE_TABLE_SALES: "${VITE_TABLE_SALES:-mm9p02mlk0i5ysy}"
+      VITE_TABLE_ATTEMPTS: "${VITE_TABLE_ATTEMPTS:-mqdlglkwjvvtplc}"
 
       # Supabase (destino) — OJO: service_role, NO anon
       SUPABASE_URL: "${SUPABASE_URL:?set SUPABASE_URL}"
       SUPABASE_SERVICE_ROLE_KEY: "${SUPABASE_SERVICE_ROLE_KEY:?set SUPABASE_SERVICE_ROLE_KEY}"
-
-      # Tenant
-      TENANT_ID: "${TENANT_ID:?set TENANT_ID}"
+      SUPABASE_TENANT_SLUG: "${SUPABASE_TENANT_SLUG:-yani-coach}"
 
       # Server
       PORT: "3000"
