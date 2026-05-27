@@ -20,6 +20,7 @@ export interface ContactoRecord {
   apellido: string | null;
   email: string | null;
   telefono: string | null;
+  chatwoot_contact_id: string | null;
   pais: string | null;
   estado_actual: string | null;
   estado_simplificado: string | null;
@@ -73,6 +74,7 @@ function normalize(
     apellido: toText(row['Apellido']),
     email: toText(row['Email']),
     telefono: toText(row['Teléfono']),
+    chatwoot_contact_id: toText(row['chatwoot_contact_id']),
     pais: toText(row['País']),
     estado_actual: estadoActual,
     estado_simplificado: mapEstadoSimplificado(estadoActual),
