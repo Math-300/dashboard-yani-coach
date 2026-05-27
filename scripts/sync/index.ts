@@ -12,6 +12,7 @@ import { syncContactos } from './syncContactos.js';
 import { syncInteracciones } from './syncInteracciones.js';
 import { syncVentas } from './syncVentas.js';
 import { syncIntentosCompra } from './syncIntentosCompra.js';
+import { syncChatwoot } from './syncChatwoot.js';
 
 type SyncFn = (tenantId: string, runId: string) => Promise<{ rows: number }>;
 
@@ -23,14 +24,16 @@ const TABLES: Record<string, SyncFn> = {
   interacciones: syncInteracciones,
   ventas: syncVentas,
   intentos_compra: syncIntentosCompra,
+  chatwoot: syncChatwoot,
 };
 
 async function openRun(tenantId: string, tableName: string): Promise<string> {
+  const source = tableName === 'chatwoot' ? 'chatwoot' : 'nocodb';
   const { data, error } = await supabaseAdmin
     .from('sync_runs')
     .insert({
       tenant_id: tenantId,
-      source: 'nocodb',
+      source,
       table_name: tableName,
       status: 'running',
     })
@@ -62,6 +65,12 @@ async function resolveForeignKeys(tenantId: string) {
     console.error('  ✗ resolve_foreign_keys falló:', error.message);
     throw error;
   }
+  const { error: cwErr } = await supabaseAdmin.rpc('resolve_chatwoot_fks', { p_tenant_id: tenantId });
+  if (cwErr) {
+    console.error('  ✗ resolve_chatwoot_fks falló:', cwErr.message);
+    throw cwErr;
+  }
+  console.log('  ✓ FKs de Chatwoot resueltos');
   console.log(`  ✓ FKs resueltos en ${((Date.now() - started) / 1000).toFixed(1)}s`);
 }
 
