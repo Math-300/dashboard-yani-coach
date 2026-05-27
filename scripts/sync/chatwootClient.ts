@@ -63,6 +63,18 @@ export async function listConversations(): Promise<ChatwootConversation[]> {
   return out;
 }
 
+export interface ChatwootAgent {
+  id: number;
+  email: string | null;
+  name: string | null;
+}
+
+/** Lista los agentes (asesoras) de la cuenta. */
+export async function listAgents(): Promise<ChatwootAgent[]> {
+  const json = await getJson<any[]>(`${BASE}/agents`);
+  return (json ?? []).map((a) => ({ id: a.id, email: a.email ?? null, name: a.name ?? null }));
+}
+
 /** Trae los mensajes de una conversación. */
 export async function listMessages(conversationId: number): Promise<ChatwootMessage[]> {
   const json = await getJson<{ payload: any[] }>(

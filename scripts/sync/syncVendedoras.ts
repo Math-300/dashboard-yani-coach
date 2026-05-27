@@ -1,5 +1,6 @@
 import { env } from './env.js';
 import { fetchAllRows, NocoRow } from './nocodbClient.js';
+import { listAgents } from './chatwootClient.js';
 import { supabaseAdmin } from './supabaseAdmin.js';
 import { chunk, cleanRaw, toIsoDate, toNumber, toText } from './helpers.js';
 
@@ -18,16 +19,25 @@ export interface VendedoraRecord {
   synced_at: string;
 }
 
-function normalize(row: NocoRow, tenantId: string): VendedoraRecord | null {
+function normalize(
+  row: NocoRow,
+  tenantId: string,
+  agentByEmail: Map<string, number>,
+): VendedoraRecord | null {
   const nocoId = toNumber(row['Id']);
   if (nocoId === null) return null;
+  const email = toText(row['Email']);
+  // chatwoot_agent_id: NocoDB no tiene el campo; lo resolvemos por email contra los agentes de Chatwoot.
+  const chatwootAgentId =
+    toNumber(row['Chatwoot Agent ID']) ??
+    (email ? agentByEmail.get(email.trim().toLowerCase()) ?? null : null);
   return {
     tenant_id: tenantId,
     nocodb_id: nocoId,
     nombre: toText(row['Nombre de la Vendedora']) ?? toText(row['Nombre']),
-    email: toText(row['Email']),
+    email,
     estado: toText(row['Estado']),
-    chatwoot_agent_id: toNumber(row['Chatwoot Agent ID']),
+    chatwoot_agent_id: chatwootAgentId,
     raw: cleanRaw(row),
     nocodb_created_at: toIsoDate(row['CreatedAt']),
     nocodb_updated_at: toIsoDate(row['UpdatedAt']),
@@ -40,8 +50,20 @@ export async function syncVendedoras(tenantId: string, runId: string) {
   const started = Date.now();
 
   const rows = await fetchAllRows(env.TABLE_SELLERS, 'vendedoras');
+
+  // Mapa email→agent_id de Chatwoot para resolver chatwoot_agent_id (NocoDB no lo guarda).
+  const agentByEmail = new Map<string, number>();
+  try {
+    for (const a of await listAgents()) {
+      if (a.email) agentByEmail.set(a.email.trim().toLowerCase(), a.id);
+    }
+    console.log(`  ${agentByEmail.size} agentes Chatwoot para resolver por email`);
+  } catch (e) {
+    console.warn('  ⚠ no pude listar agentes Chatwoot, chatwoot_agent_id quedará null:', (e as Error).message);
+  }
+
   const records = rows
-    .map((r) => normalize(r, tenantId))
+    .map((r) => normalize(r, tenantId, agentByEmail))
     .filter((r): r is VendedoraRecord => r !== null);
 
   let inserted = 0;

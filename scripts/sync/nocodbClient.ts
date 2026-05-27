@@ -14,17 +14,23 @@ interface PageResponse {
 }
 
 const PAGE_SIZE = 100;
-const DELAY_MS = 150; // protección contra rate limit NocoDB
+const DELAY_MS = 250; // protección contra rate limit NocoDB (con retry/backoff en fetchPage)
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function fetchPage(tableId: string, offset: number): Promise<PageResponse> {
   const url = `${env.NOCODB_URL}/api/v2/tables/${tableId}/records?limit=${PAGE_SIZE}&offset=${offset}`;
-  const res = await fetch(url, { headers: { 'xc-token': env.NOCODB_TOKEN } });
-  if (!res.ok) {
+  // Reintento con backoff ante 429 (rate limit) y 5xx transitorios.
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    const res = await fetch(url, { headers: { 'xc-token': env.NOCODB_TOKEN } });
+    if (res.ok) return res.json() as Promise<PageResponse>;
+    if ((res.status === 429 || res.status >= 500) && attempt < 5) {
+      await sleep(1000 * attempt); // 1s, 2s, 3s, 4s
+      continue;
+    }
     throw new Error(`NocoDB ${tableId} offset=${offset}: ${res.status} ${res.statusText}`);
   }
-  return res.json() as Promise<PageResponse>;
+  throw new Error(`NocoDB ${tableId} offset=${offset}: agotados los reintentos`);
 }
 
 export async function fetchAllRows(
