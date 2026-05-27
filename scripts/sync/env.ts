@@ -29,4 +29,8 @@ export const env = {
   SUPABASE_URL: must('SUPABASE_URL'),
   SUPABASE_SERVICE_ROLE_KEY: must('SUPABASE_SERVICE_ROLE_KEY'),
   TENANT_SLUG: process.env.SUPABASE_TENANT_SLUG?.trim() || 'yani-coach',
+
+  CHATWOOT_URL: process.env.CHATWOOT_URL?.trim() || 'https://chatwoot.yanicoach.com',
+  CHATWOOT_TOKEN: must('CHATWOOT_TOKEN'),
+  CHATWOOT_ACCOUNT_ID: process.env.CHATWOOT_ACCOUNT_ID?.trim() || '1',
 };
