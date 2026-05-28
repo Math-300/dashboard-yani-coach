@@ -16,7 +16,7 @@ import {
     getCacheState,
     CachedData
 } from '../services/cacheService';
-import { DateRange, FunnelCounts } from '../services/types';
+import { DateRange, FunnelCounts, FunnelRespondioRow, ResponsividadVendedoraRow } from '../services/types';
 
 interface UseDashboardDataResult {
     contacts: Contact[];
@@ -28,6 +28,8 @@ interface UseDashboardDataResult {
     funnelCounts: FunnelCounts;
     interactionCounts: Record<string, number>;
     kpiCounts: KpiCounts;
+    funnelRespondio: FunnelRespondioRow;
+    responsividad: ResponsividadVendedoraRow[];
 
     isLoading: boolean;
     error: Error | null;
@@ -61,6 +63,11 @@ export function useDashboardData(
         urgentFollowUps: 0,
         salesCount: 0
     });
+    const [funnelRespondio, setFunnelRespondio] = useState<FunnelRespondioRow>({
+        leads_nuevos: 0, primer_mensaje: 0, respondieron: 0, interesados: 0,
+        venta_cerrada: 0, venta_perdida: 0, tiempo_resp_mediana_min: null,
+    });
+    const [responsividad, setResponsividad] = useState<ResponsividadVendedoraRow[]>([]);
     const [error, setError] = useState<Error | null>(null);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
 
@@ -83,6 +90,8 @@ export function useDashboardData(
             urgentFollowUps: 0,
             salesCount: 0
         });
+        setFunnelRespondio(cachedData.funnelRespondio);
+        setResponsividad(cachedData.responsividad);
 
         const filtered = filterByDateRange(cachedData, startDate, endDate);
         setFilteredData(filtered);
@@ -166,6 +175,8 @@ export function useDashboardData(
         funnelCounts,
         interactionCounts,
         kpiCounts,
+        funnelRespondio,
+        responsividad,
         isLoading,
         error,
         refresh,

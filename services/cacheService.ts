@@ -19,8 +19,10 @@ import {
     getInteractions as getRealInteractions,
     getAttempts as getRealAttempts,
     getSummaryMetrics,
+    getFunnelRespondio,
+    getResponsividad,
 } from './dataSource';
-import type { DateRange, FunnelCounts } from './types';
+import type { DateRange, FunnelCounts, FunnelRespondioRow, ResponsividadVendedoraRow } from './types';
 import { NOCODB_CONFIG } from '../config';
 
 // Tipos para el caché
@@ -33,6 +35,8 @@ export interface CachedData {
     kpiCounts: KpiCounts;                 // ⚡ Conteos KPIs (micro-fetching)
     sales: Sale[];
     attempts: PurchaseAttempt[];
+    funnelRespondio: FunnelRespondioRow;
+    responsividad: ResponsividadVendedoraRow[];
     timestamp: number;
     dateRange?: DateRange | null;
 }
@@ -149,6 +153,12 @@ async function fetchAllData(dateRange?: DateRange | null, existingData?: CachedD
     const interactions = await getRealInteractions(dateRange);
     const attempts = await getRealAttempts(dateRange);
 
+    // ⚡ Paso 7: Embudo respondió (depende del rango) + responsividad (global)
+    const [funnelRespondio, responsividad] = await Promise.all([
+        getFunnelRespondio(dateRange),
+        getResponsividad(),
+    ]);
+
     if (NOCODB_CONFIG.DEBUG) {
         console.log('[Cache] Datos cargados (micro-fetching):', {
             sellers: sellers.length,
@@ -171,6 +181,8 @@ async function fetchAllData(dateRange?: DateRange | null, existingData?: CachedD
         kpiCounts,
         sales,
         attempts,
+        funnelRespondio,
+        responsividad,
         timestamp: Date.now(),
         dateRange: dateRange || null,
     };
