@@ -28,3 +28,13 @@ export interface ResponsividadVendedoraRow {
   chats_respondidos: number;
   resp_mediana_min: number | null;
 }
+
+export interface EmbudoStage {
+  id: 'leads' | 'primer_mensaje' | 'respondieron' | 'interesados' | 'venta_cerrada' | 'agendo';
+  label: string;
+  count: number | null;        // null = etapa "soon" (sin dato aún)
+  pctOfLeads: number;          // count / leads_nuevos * 100, redondeado
+  dropFromPrev: number | null; // % perdido vs etapa previa con dato; null en la primera
+  star?: boolean;              // métrica clave (Respondieron)
+  soon?: boolean;              // etapa futura (Calendly = Fase 3)
+}
