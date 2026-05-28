@@ -26,7 +26,7 @@ import {
   PurchaseAttemptStatus,
   KpiCounts,
 } from '../types';
-import type { DateRange, FunnelCounts } from './types';
+import type { DateRange, FunnelCounts, FunnelRespondioRow, ResponsividadVendedoraRow } from './types';
 import { supabase, TENANT_ID } from './supabaseClient';
 
 // ============================================================================
@@ -363,4 +363,49 @@ async function getKpiCounts(dateRange?: DateRange | null): Promise<KpiCounts> {
   ]);
 
   return { leadsCreated, newLeads, urgentFollowUps, salesCount };
+}
+
+// ============================================================================
+// Embudo extendido (Fase 2) — respuesta + ventas reales
+// ============================================================================
+
+/** Embudo Leads→Respondieron→Interesados→Venta (ventas reales + mediana). */
+export async function getFunnelRespondio(
+  dateRange?: DateRange | null,
+): Promise<FunnelRespondioRow> {
+  const { data, error } = await supabase.rpc('get_funnel_respondio', {
+    p_tenant_id: TENANT_ID,
+    p_start: dateRange?.start.toISOString() ?? null,
+    p_end: dateRange?.end.toISOString() ?? null,
+  });
+  if (error) throw error;
+  const row = Array.isArray(data) ? data[0] : data;
+  return {
+    leads_nuevos: Number(row?.leads_nuevos ?? 0),
+    primer_mensaje: Number(row?.primer_mensaje ?? 0),
+    respondieron: Number(row?.respondieron ?? 0),
+    interesados: Number(row?.interesados ?? 0),
+    venta_cerrada: Number(row?.venta_cerrada ?? 0),
+    venta_perdida: Number(row?.venta_perdida ?? 0),
+    tiempo_resp_mediana_min:
+      row?.tiempo_resp_mediana_min === null || row?.tiempo_resp_mediana_min === undefined
+        ? null
+        : Number(row.tiempo_resp_mediana_min),
+  };
+}
+
+/** Responsividad (mediana de respuesta) por vendedora. */
+export async function getResponsividad(): Promise<ResponsividadVendedoraRow[]> {
+  const { data, error } = await supabase
+    .from('v_responsividad_vendedora')
+    .select('vendedora_id, vendedora_nombre, chats_respondidos, resp_mediana_min')
+    .eq('tenant_id', TENANT_ID)
+    .order('chats_respondidos', { ascending: false });
+  if (error) throw error;
+  return (data ?? []).map((d) => ({
+    vendedora_id: d.vendedora_id,
+    vendedora_nombre: d.vendedora_nombre ?? null,
+    chats_respondidos: Number(d.chats_respondidos ?? 0),
+    resp_mediana_min: d.resp_mediana_min === null ? null : Number(d.resp_mediana_min),
+  }));
 }

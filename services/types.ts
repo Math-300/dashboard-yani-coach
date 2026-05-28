@@ -11,3 +11,20 @@ export interface DateRange {
 export interface FunnelCounts {
   [status: string]: number;
 }
+
+export interface FunnelRespondioRow {
+  leads_nuevos: number;
+  primer_mensaje: number;
+  respondieron: number;
+  interesados: number;
+  venta_cerrada: number;
+  venta_perdida: number;
+  tiempo_resp_mediana_min: number | null;
+}
+
+export interface ResponsividadVendedoraRow {
+  vendedora_id: string;
+  vendedora_nombre: string | null;
+  chats_respondidos: number;
+  resp_mediana_min: number | null;
+}
