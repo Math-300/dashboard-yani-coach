@@ -4,6 +4,7 @@
  * Detrás de Traefik en el VPS. NO recibe service_role — solo anon (horneada en el
  * bundle en build-time) + AUTH_SECRET/AUTH_PASSWORD.
  */
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
@@ -15,10 +16,22 @@ import {
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../../');
 const DIST = path.join(ROOT, 'dist');
-const PORT = Number(process.env.PORT ?? 8080);
+const PORT = Number(process.env.PORT) || 8080;
 const IS_PROD = process.env.NODE_ENV === 'production';
 const AUTH_SECRET = process.env.AUTH_SECRET ?? '';
 const AUTH_PASSWORD = process.env.AUTH_PASSWORD ?? '';
+
+// Fallos visibles (regla del proyecto): un deploy mal configurado debe fallar
+// fuerte al arrancar, no devolver 500 silenciosos por request.
+if (!AUTH_SECRET || !AUTH_PASSWORD) {
+  const msg = '[web] FALTA AUTH_SECRET y/o AUTH_PASSWORD — el login no funcionará';
+  if (IS_PROD) { console.error(msg); process.exit(1); }
+  else console.warn(msg);
+}
+if (!fs.existsSync(DIST)) {
+  console.error(`[web] no existe dist/ en ${DIST} — corré 'npm run build' antes`);
+  if (IS_PROD) process.exit(1);
+}
 
 const app = express();
 app.use(express.json());
