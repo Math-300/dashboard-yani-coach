@@ -265,6 +265,15 @@ const revalidateInBackground = async (dateRange?: DateRange | null) => {
                 currentDateRange: dateRange || null,
             };
             notifySubscribers();
+        } catch (err) {
+            // Una revalidación en background que falla NO debe quedar invisible: marcamos
+            // el error y notificamos, para que la UI muestre el fallo en vez de seguir
+            // mostrando datos viejos como si estuvieran frescos (regla: errores visibles).
+            cacheState = {
+                ...cacheState,
+                error: err instanceof Error ? err : new Error(String(err)),
+            };
+            notifySubscribers();
         } finally {
             revalidationPromise = null;
         }
