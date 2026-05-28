@@ -36,6 +36,8 @@ function DashboardShell() {
     sales,
     attempts,
     sellers,
+    funnelRespondio,
+    responsividad,
     isLoading,
     error,
     refresh,
@@ -195,6 +197,8 @@ function DashboardShell() {
                   sales={sales}
                   dateRange={dateRange}
                   isDarkMode={isDarkMode}
+                  funnelRespondio={funnelRespondio}
+                  responsividad={responsividad}
                 />
               )}
               {activeTab === 'sales' && (

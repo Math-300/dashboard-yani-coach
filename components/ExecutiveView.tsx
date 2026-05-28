@@ -1,11 +1,9 @@
 import React, { useMemo } from 'react';
 import { Users, UserPlus, DollarSign, TrendingUp, Clock, Wallet, BarChart3 } from 'lucide-react';
-import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
-} from 'recharts';
 import KPICard from './KPICard';
+import EmbudoRespondio from './EmbudoRespondio';
 import { Contact, Sale, KpiCounts } from '../types';
-import { FunnelCounts } from '../services/types';
+import { FunnelCounts, FunnelRespondioRow, ResponsividadVendedoraRow } from '../services/types';
 import {
     calculateTotalLeadsInPipeline,
     calculateNewLeadsToday,
@@ -14,41 +12,7 @@ import {
     calculateUrgentFollowUps,
     calculatePipelineValue,
     formatCurrency,
-    FunnelStep
 } from '../services/metricsCalculator';
-
-/**
- * ⚡ Construye el embudo desde conteos pre-calculados del servidor.
- * Agrupa los estados detallados de NocoDB en las 5 categorías del embudo.
- */
-const buildFunnelFromCounts = (counts: FunnelCounts): FunnelStep[] => {
-    const newCount = (counts['Lead Nuevo'] || 0);
-    const followUpCount = (counts['En Seguimiento 24 hs después primer contacto'] || 0)
-        + (counts['En Seguimiento 7 días'] || 0)
-        + (counts['Seguimiento Cliente Nuevo'] || 0)
-        + (counts['Seguimiento venta perdida'] || 0)
-        + (counts['Seguimiento leads sin respuesta'] || 0)
-        + (counts['Seguimiento Potencial venta'] || 0)
-        + (counts['Contactar en 48 horas'] || 0)
-        + (counts['Nutrición a Largo Plazo'] || 0)
-        + (counts['No se presentó'] || 0);
-    const interestedCount = (counts['Llamada Agendada'] || 0);
-    const wonCount = (counts['Venta Ganada'] || 0);
-    const lostCount = (counts['Venta Perdida'] || 0)
-        + (counts['Leads perdidos (que nunca contestaron)'] || 0)
-        + (counts['no contactar'] || 0);
-
-    const total = newCount + followUpCount + interestedCount + wonCount + lostCount;
-    const pct = (n: number) => total > 0 ? Math.round((n / total) * 100) : 0;
-
-    return [
-        { status: 'Lead Nuevo', count: newCount, percentage: pct(newCount) },
-        { status: 'En Seguimiento', count: followUpCount, percentage: pct(followUpCount) },
-        { status: 'Interesado', count: interestedCount, percentage: pct(interestedCount) },
-        { status: 'Venta Cerrada', count: wonCount, percentage: pct(wonCount) },
-        { status: 'Venta Perdida', count: lostCount, percentage: pct(lostCount) },
-    ];
-};
 
 interface ExecutiveViewProps {
     contacts: Contact[];
@@ -57,6 +21,8 @@ interface ExecutiveViewProps {
     sales: Sale[];
     dateRange: { start: Date; end: Date };
     isDarkMode: boolean;
+    funnelRespondio: FunnelRespondioRow;
+    responsividad: ResponsividadVendedoraRow[];
 }
 
 /**
@@ -71,24 +37,10 @@ const ExecutiveView: React.FC<ExecutiveViewProps> = ({
     kpiCounts,
     sales,
     dateRange,
-    isDarkMode
+    isDarkMode,
+    funnelRespondio,
+    responsividad
 }) => {
-    // Colores del tema para Recharts
-    const axisColor = isDarkMode ? '#9ca3af' : '#4b5563';
-    const gridColor = isDarkMode ? '#374151' : '#e5e7eb';
-    const tooltipBg = isDarkMode ? '#1f2937' : '#ffffff';
-    const tooltipBorder = isDarkMode ? '#374151' : '#e5e7eb';
-    const tooltipText = isDarkMode ? '#f3f4f6' : '#1f2937';
-
-    // Colores para cada estado del embudo
-    const statusColors: Record<string, string> = {
-        'Lead Nuevo': '#16a34a',
-        'En Seguimiento': '#2563eb',
-        'Interesado': '#d97706',
-        'Venta Cerrada': '#059669',
-        'Venta Perdida': '#dc2626'
-    };
-
     // Calcular métricas
     const metrics = useMemo(() => {
         // Leads en pipeline: calcular desde conteos del embudo
@@ -104,9 +56,6 @@ const ExecutiveView: React.FC<ExecutiveViewProps> = ({
         // Valor del pipeline
         const pipelineValue = calculatePipelineValue(contacts);
 
-        // ⚡ Embudo: Usar conteos pre-calculados del servidor
-        const funnelData = buildFunnelFromCounts(funnelCounts);
-
         return {
             totalLeadsInPipeline,
             newLeadsToday,
@@ -114,49 +63,8 @@ const ExecutiveView: React.FC<ExecutiveViewProps> = ({
             conversionRate,
             urgentFollowUps,
             pipelineValue,
-            funnelData
         };
     }, [contacts, funnelCounts, kpiCounts, sales, dateRange]);
-
-    // Preparar datos para el gráfico de embudo con mínimo visible
-    const chartData = useMemo(() => {
-        if (metrics.funnelData.length === 0) return [];
-
-        const maxCount = Math.max(...metrics.funnelData.map(d => d.count), 1);
-        const minVisible = maxCount * 0.05; // 5% del máximo para barras visibles
-
-        return metrics.funnelData.map(d => ({
-            ...d,
-            // Usar el valor real para mostrar, pero un mínimo para el ancho de la barra
-            displayCount: d.count === 0 ? minVisible : d.count
-        }));
-    }, [metrics.funnelData]);
-
-    // Custom Tooltip para el gráfico
-    const CustomTooltip = ({ active, payload }: any) => {
-        if (active && payload && payload.length) {
-            const data = payload[0].payload as FunnelStep;
-            return (
-                <div
-                    className="px-3 py-2 rounded-lg shadow-lg border"
-                    style={{
-                        backgroundColor: tooltipBg,
-                        borderColor: tooltipBorder,
-                        color: tooltipText
-                    }}
-                >
-                    <p className="font-semibold">{data.status}</p>
-                    <p className="text-sm">
-                        <span className="font-medium">{data.count}</span> contactos
-                    </p>
-                    <p className="text-sm opacity-80">
-                        {data.percentage}% del total
-                    </p>
-                </div>
-            );
-        }
-        return null;
-    };
 
     return (
         <div className="space-y-8">
@@ -262,89 +170,26 @@ const ExecutiveView: React.FC<ExecutiveViewProps> = ({
                 />
             </div>
 
-            {/* Gráfico de Embudo de Ventas */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-                <div className="flex items-center justify-between mb-6">
-                    <div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                            Embudo de Ventas
-                        </h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                            Distribución de contactos por estado en el pipeline
-                        </p>
-                    </div>
+            {/* Embudo real + Responsividad del equipo */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                    <EmbudoRespondio funnel={funnelRespondio} />
                 </div>
-
-                {/* Gráfico de embudo con Recharts */}
-                <div className="w-full h-[400px]">
-                    <ResponsiveContainer width="100%" height="100%" minHeight={200} minWidth={0} debounce={200}>
-                        <BarChart
-                            layout="vertical"
-                            data={chartData}
-                            margin={{ top: 20, right: 80, left: 40, bottom: 20 }}
-                        >
-                            <CartesianGrid
-                                strokeDasharray="3 3"
-                                horizontal={false}
-                                stroke={gridColor}
-                            />
-                            <XAxis
-                                type="number"
-                                tick={{ fill: axisColor, fontSize: 12 }}
-                                axisLine={{ stroke: gridColor }}
-                            >
-                            </XAxis>
-                            <YAxis
-                                type="category"
-                                dataKey="status"
-                                width={120}
-                                tick={{ fill: axisColor, fontSize: 12 }}
-                                axisLine={{ stroke: gridColor }}
-                            />
-                            <Tooltip content={<CustomTooltip />} />
-                            <Bar
-                                dataKey="displayCount"
-                                radius={[0, 6, 6, 0]}
-                                label={{
-                                    position: 'right',
-                                    fill: axisColor,
-                                    fontSize: 12,
-                                    fontWeight: 500,
-                                    formatter: (value: number, index: number) => {
-                                        const data = chartData[index];
-                                        return data ? `${data.count} (${data.percentage}%)` : '';
-                                    }
-                                }}
-                            >
-                                {chartData.map((entry, index) => (
-                                    <Cell
-                                        key={`cell-${index}`}
-                                        fill={statusColors[entry.status] || '#D4AF37'}
-                                    />
-                                ))}
-                            </Bar>
-                        </BarChart>
-                    </ResponsiveContainer>
-                </div>
-
-                {/* Resumen del embudo */}
-                <div className="mt-6 grid grid-cols-2 md:grid-cols-5 gap-4">
-                    {metrics.funnelData.map((step, index) => (
-                        <div
-                            key={step.status}
-                            className="text-center p-3 rounded-lg bg-gray-50 dark:bg-gray-700/50"
-                        >
-                            <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                                {step.status}
-                            </p>
-                            <p className="text-lg font-bold text-gray-900 dark:text-white mt-1">
-                                {step.count}
-                            </p>
-                            <p className="text-xs text-gray-400 dark:text-gray-500">
-                                {step.percentage}%
-                            </p>
-                        </div>
-                    ))}
+                <div className="bg-gray-800 rounded-xl p-6 border border-white/10">
+                    <h3 className="text-lg font-semibold text-gray-100 mb-1">Responsividad del equipo</h3>
+                    <p className="text-sm text-gray-400 mb-4">Mediana de primera respuesta</p>
+                    <ul className="space-y-3">
+                        {responsividad.slice(0, 6).map((v) => (
+                            <li key={v.vendedora_id} className="flex items-center justify-between">
+                                <span className="text-sm text-gray-300">{v.vendedora_nombre ?? 'Sin nombre'}</span>
+                                <span className="text-sm text-gray-100">
+                                    <span className="font-semibold">{v.chats_respondidos}</span>
+                                    <span className="text-gray-500"> chats · </span>
+                                    <span className="text-gold-400">{v.resp_mediana_min !== null ? `${v.resp_mediana_min} min` : '—'}</span>
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
             </div>
 
