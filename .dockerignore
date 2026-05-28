@@ -11,3 +11,15 @@ plans
 docs
 .brain
 screenshots
+.agent
+.claude
+.claude-yani
+supabase
+vercel.json
+vercel.env.example
+docker-compose.sync.yml
+metadata.json
+*.test.ts
+CLAUDE.md
+CLAUDE.local.md
+README.md
