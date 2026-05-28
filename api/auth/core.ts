@@ -30,7 +30,9 @@ export function verifyToken(
   token: string,
   secret: string,
 ): { sub?: string; iat?: number; name?: string } | null {
-  const [payloadEncoded, signature] = token.split('.');
+  const parts = token.split('.');
+  if (parts.length !== 2) return null;
+  const [payloadEncoded, signature] = parts;
   if (!payloadEncoded || !signature) return null;
   if (sign(payloadEncoded, secret) !== signature) return null;
   try {

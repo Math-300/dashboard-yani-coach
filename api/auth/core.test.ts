@@ -26,6 +26,10 @@ const SECRET = 'test-secret';
   {
     assert.equal(verifyToken('sin-punto', SECRET), null);
   }
+  // 3b) token con demasiados puntos → rechazado (formato es exactamente payload.signature)
+  {
+    assert.equal(verifyToken('a.b.c', SECRET), null);
+  }
   // 4) payload manipulado con firma vieja → rechazado
   {
     const token = createSessionToken(SECRET);
@@ -55,5 +59,5 @@ const SECRET = 'test-secret';
     assert.equal(parsed['a'], '1');
     assert.deepEqual(parseCookies(undefined), {});
   }
-  console.log('✓ auth core: 7/7 casos pasaron');
+  console.log('✓ auth core: 8/8 casos pasaron');
 })();
