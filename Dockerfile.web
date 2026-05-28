@@ -1,0 +1,38 @@
+# Web del Dashboard: build estático (Vite) + runtime Express.
+# Build EN EL VPS desde la raíz del repo:
+#   docker build -f Dockerfile.web \
+#     --build-arg VITE_SUPABASE_URL=... \
+#     --build-arg VITE_SUPABASE_ANON_KEY=... \
+#     --build-arg VITE_SUPABASE_TENANT_ID=... \
+#     -t yani-dashboard-web:local .
+
+# ---- Stage 1: build del bundle ----
+FROM node:20-alpine AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY . .
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+ARG VITE_SUPABASE_TENANT_ID
+ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL \
+    VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY \
+    VITE_SUPABASE_TENANT_ID=$VITE_SUPABASE_TENANT_ID
+RUN npm run build
+
+# ---- Stage 2: runtime ----
+FROM node:20-alpine AS runtime
+WORKDIR /app
+RUN apk add --no-cache tini \
+ && npm install --omit=dev --no-audit --no-fund \
+      tsx@4.19.2 typescript@5.6.3 express@4.21.2 \
+ && npm cache clean --force
+COPY --from=build /app/dist ./dist
+COPY scripts/web/ ./scripts/web/
+COPY api/auth/core.ts ./api/auth/core.ts
+COPY tsconfig.json ./tsconfig.json
+EXPOSE 8080
+ENV NODE_ENV=production \
+    PORT=8080
+ENTRYPOINT ["/sbin/tini", "--"]
+CMD ["npx", "tsx", "scripts/web/server.ts"]
