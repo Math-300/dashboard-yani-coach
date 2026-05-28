@@ -12,6 +12,7 @@
     "validate": "tsx scripts/validate_metrics.ts",
     "test:tz": "tsx scripts/test_noco_tz.ts",
     "sync": "tsx scripts/sync/index.ts",
+    "web": "tsx scripts/web/server.ts",
     "smoke": "tsx scripts/smoke_datasource.ts"
   },
   "dependencies": {
