@@ -39,7 +39,7 @@ services:
         - "traefik.http.routers.yanidash.rule=Host(`${DASHBOARD_DOMAIN:?set DASHBOARD_DOMAIN}`)"
         - "traefik.http.routers.yanidash.entrypoints=websecure"
         - "traefik.http.routers.yanidash.tls=true"
-        - "traefik.http.routers.yanidash.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.yanidash.tls.certresolver=letsencryptresolver"
         - "traefik.http.services.yanidash.loadbalancer.server.port=8080"
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:8080/health', r => r.statusCode===200?process.exit(0):process.exit(1))"]
