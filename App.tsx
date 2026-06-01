@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { LayoutDashboard, BarChart3, DollarSign, UserCheck, GitBranch, RefreshCw, MessageCircle, X } from 'lucide-react';
+import { LayoutDashboard, BarChart3, DollarSign, UserCheck, GitBranch, RefreshCw } from 'lucide-react';
 import ExecutiveView from './components/ExecutiveView';
 import SalesView from './components/SalesView';
 import PerformanceView from './components/PerformanceView';
 import PipelineView from './components/PipelineView';
 import DateRangePicker from './components/DateRangePicker';
-import ChatAssistant from './components/ChatAssistant';
 import { useDashboardData } from './hooks/useDashboardData';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import AuthGuard from './auth/AuthGuard';
@@ -15,8 +14,7 @@ import { logout } from './services/authService';
 import { loadInitialRange, savePresetSelection, type DateRangePreset } from './services/dateUtils';
 
 function DashboardShell() {
-  const [activeTab, setActiveTab] = useState<'executive' | 'sales' | 'performance' | 'pipeline' | 'assistant'>('executive');
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'executive' | 'sales' | 'performance' | 'pipeline'>('executive');
   const { refreshSession } = useAuth();
 
   // Force Dark Mode always
@@ -88,7 +86,6 @@ function DashboardShell() {
     { id: 'sales', label: 'Ventas & Ingresos', icon: <DollarSign className="w-4 h-4" /> },
     { id: 'performance', label: 'Desempeño Vendedoras', icon: <UserCheck className="w-4 h-4" /> },
     { id: 'pipeline', label: 'Pipeline & Actividad', icon: <GitBranch className="w-4 h-4" /> },
-    { id: 'assistant', label: 'Asistente Yani', icon: <MessageCircle className="w-4 h-4" /> },
   ];
 
   return (
@@ -229,48 +226,9 @@ function DashboardShell() {
                   isDarkMode={isDarkMode}
                 />
               )}
-              {activeTab === 'assistant' && (
-                <ChatAssistant />
-              )}
             </div>
           )}
         </main>
-
-        {/* Floating Chat Button */}
-        <button
-          type="button"
-          onClick={() => setIsChatOpen(true)}
-          className="fixed bottom-6 right-6 z-50 inline-flex items-center justify-center w-14 h-14 rounded-full bg-gold-500 text-white shadow-lg hover:bg-gold-400 transition-colors"
-          aria-label="Abrir asistente de IA"
-        >
-          <MessageCircle className="w-6 h-6" />
-        </button>
-
-        {/* Chat Popup */}
-        {isChatOpen && (
-          <div className="fixed inset-0 z-50 flex items-end justify-end p-4 sm:p-6">
-            <div className="absolute inset-0 bg-black/40" onClick={() => setIsChatOpen(false)} />
-            <div className="relative w-full sm:w-[420px] h-[70vh] max-h-[720px] bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800">
-                <div className="flex items-center gap-2 text-sm font-semibold text-gray-900 dark:text-white">
-                  <MessageCircle className="w-4 h-4 text-gold-500" />
-                  Asistente Yani
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsChatOpen(false)}
-                  className="p-2 rounded-md text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-                  aria-label="Cerrar asistente"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="h-[calc(70vh-52px)] max-h-[668px]">
-                <ChatAssistant variant="dialog" />
-              </div>
-            </div>
-          </div>
-        )}
 
       </div>
     </div>
