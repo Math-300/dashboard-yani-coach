@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import express from 'express';
 import {
   COOKIE_NAME, COOKIE_TTL_SECONDS, createSessionToken, verifyToken,
-  buildCookie, buildClearCookie, parseCookies,
+  buildCookie, buildClearCookie, parseCookies, sign, timingSafeEqualStr,
 } from '../../api/auth/core.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -45,7 +45,11 @@ app.post('/api/auth/login', (req, res) => {
     return res.status(500).json({ error: 'Configuración de autenticación incompleta' });
   }
   const provided = req.body?.password;
-  if (!provided || provided !== AUTH_PASSWORD) {
+  // Comparación en tiempo constante sobre el HMAC (longitud fija): no filtra
+  // ni el contenido ni el largo de la contraseña ante un timing-attack.
+  const ok = typeof provided === 'string' && provided.length > 0 &&
+    timingSafeEqualStr(sign(provided, AUTH_SECRET), sign(AUTH_PASSWORD, AUTH_SECRET));
+  if (!ok) {
     return res.status(401).json({ error: 'Credenciales inválidas' });
   }
   const token = createSessionToken(AUTH_SECRET);

@@ -20,6 +20,18 @@ export function sign(payload: string, secret: string): string {
   return base64Url(hmac.digest());
 }
 
+/**
+ * Comparación de strings en tiempo constante (anti timing-attack).
+ * El chequeo de longitud previo no filtra nada sensible cuando ambos lados
+ * son digests HMAC de longitud fija (el caso de uso real acá).
+ */
+export function timingSafeEqualStr(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  if (ab.length !== bb.length) return false;
+  return crypto.timingSafeEqual(ab, bb);
+}
+
 export function createSessionToken(secret: string): string {
   const payload = JSON.stringify({ sub: 'yd-admin', iat: Date.now(), name: 'Llave Dorada Yani' });
   const payloadEncoded = base64Url(payload);
@@ -34,7 +46,7 @@ export function verifyToken(
   if (parts.length !== 2) return null;
   const [payloadEncoded, signature] = parts;
   if (!payloadEncoded || !signature) return null;
-  if (sign(payloadEncoded, secret) !== signature) return null;
+  if (!timingSafeEqualStr(sign(payloadEncoded, secret), signature)) return null;
   try {
     const json = Buffer.from(
       payloadEncoded.replace(/-/g, '+').replace(/_/g, '/'), 'base64',
