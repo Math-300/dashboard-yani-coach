@@ -54,6 +54,16 @@ async function closeRun(runId: string, rows: number) {
     .eq('id', runId);
 }
 
+async function closeRunError(runId: string, err: unknown) {
+  // Fallo VISIBLE (regla cero-tolerancia): el run queda como 'error' en sync_runs,
+  // consultable desde el dashboard/Supabase, en vez de tragarse en silencio.
+  console.error(`  ⚠ marcando sync_run ${runId} como error`);
+  await supabaseAdmin
+    .from('sync_runs')
+    .update({ status: 'error', finished_at: new Date().toISOString() })
+    .eq('id', runId);
+}
+
 async function resolveForeignKeys(tenantId: string) {
   // supabase-js limita SELECT a 1000 rows por default, por lo que no podemos
   // resolver FKs en memoria cuando hay tablas grandes (contactos 30k). Hacemos
@@ -108,6 +118,7 @@ async function main() {
       await closeRun(runId, rows);
     } catch (e) {
       console.error(`\n✗ Sync ${name} falló:`, e);
+      await closeRunError(runId, e);
       process.exit(1);
     }
   }
