@@ -90,14 +90,15 @@ function msg(
   assert.equal(r.tiempo_primera_respuesta_seg, 600); // 700-100, ignora el auto a los 102
 }
 
-// 10) Solo hay respuesta automática → tiempo humano null
+// 10) Lead escribió primero y solo hubo respuesta automática (template):
+//     respondio=true (el lead enganchó), pero tiempo humano = null
 {
   const r = deriveRespondio([
     msg(0, 100),
     msg(1, 105, false, { is_template_replay: true, template_name: 'revision_perfil_ig' }),
   ]);
-  assert.equal(r.respondio, false); // el lead no escribió después
-  assert.equal(r.tiempo_primera_respuesta_seg, null);
+  assert.equal(r.respondio, true); // el lead escribió primero → respondió/enganchó
+  assert.equal(r.tiempo_primera_respuesta_seg, null); // sin respuesta humana
 }
 
 // 11) automationSenders configurable

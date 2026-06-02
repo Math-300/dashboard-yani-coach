@@ -43,26 +43,15 @@ export function deriveRespondio(
   const primer_outbound_at = firstOutbound?.created_at ?? null;
   const primer_inbound_at = firstInbound?.created_at ?? null;
 
-  // Hay al menos un outbound humano (ni template ni cuenta automática)
-  const hasHumanOutbound = visible.some(
-    (m) =>
-      m.message_type === 1 &&
-      m.is_template_replay !== true &&
-      !(m.sender_name != null && automation.has(m.sender_name)),
-  );
-
+  // La señal `respondio` NO cambia (spec): el lead respondió/enganchó si escribió
+  // antes del primer outbound, o si hay un inbound posterior al primer outbound.
+  // Solo cambia el TIEMPO de respuesta (abajo), que ahora es humano.
   let respondio = false;
   if (primer_inbound_at !== null) {
     if (primer_outbound_at === null) {
       respondio = true;
     } else if (primer_inbound_at < primer_outbound_at) {
-      // Lead escribió antes del primer outbound: cuenta si hay un outbound humano
-      // o si el lead volvió a escribir después del primer outbound
-      respondio =
-        hasHumanOutbound ||
-        visible.some(
-          (m) => m.message_type === 0 && m.created_at > primer_outbound_at,
-        );
+      respondio = true;
     } else {
       respondio = visible.some(
         (m) => m.message_type === 0 && m.created_at > primer_outbound_at,
