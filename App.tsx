@@ -1,240 +1,185 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { LayoutDashboard, BarChart3, DollarSign, UserCheck, GitBranch, RefreshCw } from 'lucide-react';
-import ExecutiveView from './components/ExecutiveView';
-import SalesView from './components/SalesView';
-import PerformanceView from './components/PerformanceView';
-import PipelineView from './components/PipelineView';
-import DateRangePicker from './components/DateRangePicker';
+import { Sidebar, type SectionId } from './components/yc/Sidebar';
+import { Topbar } from './components/yc/Topbar';
 import { useDashboardData } from './hooks/useDashboardData';
-import { AuthProvider, useAuth } from './auth/AuthContext';
+import { AuthProvider } from './auth/AuthContext';
 import AuthGuard from './auth/AuthGuard';
 import LoginView from './components/LoginView';
-import { logout } from './services/authService';
-import { loadInitialRange, savePresetSelection, type DateRangePreset } from './services/dateUtils';
+import { loadInitialRange, savePresetSelection, getPresetRange, type DateRangePreset } from './services/dateUtils';
+import { getCacheState } from './services/cacheService';
 
-function DashboardShell() {
-  const [activeTab, setActiveTab] = useState<'executive' | 'sales' | 'performance' | 'pipeline'>('executive');
-  const { refreshSession } = useAuth();
-
-  // Force Dark Mode always
-  const isDarkMode = true;
-
-  // Initialize Dates: preset persistido en localStorage, default = "Últimos 30 días"
-  const [dateRange, setDateRange] = useState<{ start: Date, end: Date }>(() => loadInitialRange().range);
-
-  // ✅ NUEVO: Usar hook con caché integrado
-  // Los datos se cargan UNA sola vez y el filtrado es en el cliente
-  const {
-    contacts,
-    funnelCounts, // ⚡ Conteos del embudo (sin descargar 27K registros)
-    interactionCounts, // ⚡ Conteos de interacciones por canal
-    kpiCounts, // ⚡ Conteos de KPIs (micro-fetching)
-    interactions,
-    sales,
-    attempts,
-    sellers,
-    funnelRespondio,
-    responsividad,
-    isLoading,
-    error,
-    refresh,
-    isInitialLoad
-  } = useDashboardData(dateRange.start, dateRange.end);
-
-  const handleDateChange = (start: Date, end: Date, preset: DateRangePreset = 'custom') => {
-    setDateRange({ start, end });
-    savePresetSelection(preset, { start, end });
-  };
-
-
-  // 🔧 Debug + fix: Recalcular tamaños de Recharts al cambiar de pestaña
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const triggerResize = () => window.dispatchEvent(new Event('resize'));
-
-    const timeoutId = window.setTimeout(() => {
-      triggerResize();
-      window.setTimeout(triggerResize, 200);
-
-      const containers = Array.from(document.querySelectorAll('.recharts-responsive-container'));
-      if (containers.length === 0) return;
-
-      // Debug logging only when explicitly requested
-      if (window.location.search.includes('debugCharts=1')) {
-        console.warn(`[ChartSize] activeTab=${activeTab} containers=${containers.length}`);
-        containers.forEach((el, index) => {
-          const rect = el.getBoundingClientRect();
-          const parent = (el as HTMLElement).parentElement;
-          const parentRect = parent ? parent.getBoundingClientRect() : null;
-          const parentStyle = parent ? window.getComputedStyle(parent) : null;
-          console.warn(
-            `[ChartSize] #${index} w=${Math.round(rect.width)} h=${Math.round(rect.height)} ` +
-            `parentW=${parentRect ? Math.round(parentRect.width) : 'n/a'} parentH=${parentRect ? Math.round(parentRect.height) : 'n/a'} ` +
-            `parentDisplay=${parentStyle?.display || 'n/a'} parentMinH=${parentStyle?.minHeight || 'n/a'} parentHeight=${parentStyle?.height || 'n/a'}`
-          );
-        });
-      }
-    }, 400);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [activeTab, isLoading, isInitialLoad]);
-
-  const tabs = [
-    { id: 'executive', label: 'Resumen Ejecutivo', icon: <BarChart3 className="w-4 h-4" /> },
-    { id: 'sales', label: 'Ventas & Ingresos', icon: <DollarSign className="w-4 h-4" /> },
-    { id: 'performance', label: 'Desempeño Vendedoras', icon: <UserCheck className="w-4 h-4" /> },
-    { id: 'pipeline', label: 'Pipeline & Actividad', icon: <GitBranch className="w-4 h-4" /> },
-  ];
-
+// ── Skeleton (first-paint shimmer) ────────────────────────
+// Ported from diseno-aprobado/dashboard.jsx lines 872-887
+function SkeletonScreen() {
   return (
-    <div className="dark">
-      <div
-        className="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-800 dark:text-gray-100 font-sans pb-20 transition-colors duration-300"
-        key={activeTab}
-      >
-
-        {/* Top Navigation Bar */}
-        <header className="bg-white dark:bg-black border-b border-gray-200 dark:border-gray-800 sticky top-0 z-50 transition-colors duration-300">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center">
-                <div className="bg-gray-900 dark:bg-gray-800 p-2 rounded-lg mr-3 shadow-lg border border-gold-500/30">
-                  <LayoutDashboard className="w-6 h-6 text-gold-400" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
-                    Yani<span className="text-gold-500">Coach</span>
-                  </h1>
-                  <p className="text-xs text-gray-500 dark:text-gold-200/60 uppercase tracking-wider font-semibold">Analytics Dashboard</p>
-                </div>
-              </div>
-
-              <div className="flex items-center space-x-4">
-                {/* Botón de refrescar datos */}
-                <button
-                  onClick={refresh}
-                  disabled={isLoading}
-                  className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
-                  title="Refrescar datos"
-                >
-                  <RefreshCw className={`w-4 h-4 text-gray-600 dark:text-gray-400 ${isLoading ? 'animate-spin' : ''}`} />
-                </button>
-
-                <button
-                  onClick={async () => {
-                    await logout();
-                    await refreshSession();
-                  }}
-                  className="px-3 py-2 rounded-lg bg-black/40 border border-gold-500/30 text-xs uppercase tracking-[0.2em] text-gold-200 hover:border-gold-400/70 hover:text-gold-100 transition-colors"
-                  title="Cerrar sesión"
-                >
-                  Salir
-                </button>
-
-                <DateRangePicker
-                  startDate={dateRange.start}
-                  endDate={dateRange.end}
-                  onChange={handleDateChange}
-                />
-              </div>
-            </div>
-
-            {/* Tabs */}
-            <div className="flex space-x-8 -mb-px">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`
-                    flex items-center space-x-2 pb-4 px-1 border-b-2 font-medium text-sm transition-all duration-200
-                    ${activeTab === tab.id
-                      ? 'border-gold-500 text-gray-900 dark:text-gold-400'
-                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gold-200 hover:border-gray-300 dark:hover:border-gray-600'}
-                  `}
-                >
-                  {tab.icon}
-                  <span>{tab.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </header>
-
-        {/* Main Content Area */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-
-          {/* Loading inicial */}
-          {isInitialLoad ? (
-            <div className="flex flex-col justify-center items-center h-64 space-y-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold-500"></div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Cargando datos…</p>
-            </div>
-          ) : error ? (
-            <div className="flex flex-col justify-center items-center h-64 space-y-3">
-              <p className="text-sm text-gray-300">No se pudieron cargar los datos.</p>
-              <p className="text-xs text-gray-500">Detalle: {error.message}</p>
-              <button
-                onClick={refresh}
-                disabled={isLoading}
-                className="px-4 py-2 rounded-lg bg-gold-500/80 hover:bg-gold-500 disabled:opacity-50 text-sm text-black font-medium flex items-center gap-2"
-              >
-                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                Reintentar
-              </button>
-            </div>
-          ) : (
-            <div className="animate-fade-in-up">
-              {activeTab === 'executive' && (
-                <ExecutiveView
-                  contacts={contacts}
-                  funnelCounts={funnelCounts}
-                  kpiCounts={kpiCounts}
-                  sales={sales}
-                  dateRange={dateRange}
-                  isDarkMode={isDarkMode}
-                  funnelRespondio={funnelRespondio}
-                  responsividad={responsividad}
-                />
-              )}
-              {activeTab === 'sales' && (
-                <SalesView
-                  sales={sales}
-                  dateRange={dateRange}
-                  isDarkMode={isDarkMode}
-                />
-              )}
-              {activeTab === 'performance' && (
-                <PerformanceView
-                  contacts={contacts}
-                  interactions={interactions}
-                  sales={sales}
-                  sellers={sellers}
-                  dateRange={dateRange}
-                  isDarkMode={isDarkMode}
-                />
-              )}
-              {activeTab === 'pipeline' && (
-                <PipelineView
-                  contacts={contacts}
-                  funnelCounts={funnelCounts}
-                  interactionCounts={interactionCounts}
-                  kpiCounts={kpiCounts}
-                  interactions={interactions}
-                  dateRange={dateRange}
-                  isDarkMode={isDarkMode}
-                />
-              )}
-            </div>
-          )}
-        </main>
-
+    <div style={{ flex: 1, padding: '24px 32px', display: 'flex', flexDirection: 'column', gap: 18 }}>
+      <div className="yc-skeleton" style={{ height: 64, borderRadius: 16 }} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+        <div className="yc-skeleton" style={{ height: 200, borderRadius: 16 }} />
+        <div className="yc-skeleton" style={{ height: 200, borderRadius: 16 }} />
+        <div className="yc-skeleton" style={{ height: 200, borderRadius: 16 }} />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, flex: 1, minHeight: 320 }}>
+        <div className="yc-skeleton" style={{ borderRadius: 16 }} />
+        <div className="yc-skeleton" style={{ borderRadius: 16 }} />
       </div>
     </div>
   );
 }
 
+// ── lastUpdatedLabel helper ────────────────────────────────
+function buildLastUpdatedLabel(): string {
+  const state = getCacheState();
+  const ts = state.lastFetch ?? state.data?.timestamp ?? null;
+  if (!ts) return 'se actualiza solo';
+  const diffMs = Date.now() - ts;
+  const diffMin = Math.floor(diffMs / 60_000);
+  if (diffMin < 1) return 'hace un momento';
+  if (diffMin === 1) return '1 min';
+  if (diffMin < 60) return `${diffMin} min`;
+  const diffH = Math.floor(diffMin / 60);
+  return diffH === 1 ? '1 h' : `${diffH} h`;
+}
+
+// ── DashboardShell ────────────────────────────────────────
+function DashboardShell() {
+  const [section, setSection] = useState<SectionId>('resumen');
+  const [collapsed, setCollapsed] = useState(false);
+
+  // Initialize date range from persisted localStorage preset
+  const [dateRange, setDateRange] = useState<{ start: Date; end: Date }>(() => loadInitialRange().range);
+
+  // Track which pill id is "active" for the Topbar
+  const [activePresetId, setActivePresetId] = useState<string>(() => {
+    const { preset } = loadInitialRange();
+    // Map dateUtils preset IDs → pill IDs used in Topbar
+    if (preset === 'today') return 'today';
+    if (preset === 'week') return '7d';
+    if (preset === 'month') return 'month';
+    if (preset === 'custom') return 'custom';
+    return 'custom'; // any other preset (last_30_days etc.) shows as custom in topbar
+  });
+
+  const {
+    isLoading,
+    error,
+    refresh,
+    isInitialLoad,
+  } = useDashboardData(dateRange.start, dateRange.end);
+
+  const handleRangeChange = (presetId: string, start: Date, end: Date) => {
+    setDateRange({ start, end });
+    setActivePresetId(presetId);
+    // Map pill id → DateRangePreset for persistence
+    const presetMap: Record<string, DateRangePreset> = {
+      today: 'today',
+      '7d': 'week',
+      month: 'month',
+      custom: 'custom',
+    };
+    const preset: DateRangePreset = presetMap[presetId] ?? 'custom';
+    savePresetSelection(preset, { start, end });
+  };
+
+  const lastUpdatedLabel = buildLastUpdatedLabel();
+
+  return (
+    <div style={{ display: 'flex', width: '100%', minHeight: '100vh' }}>
+      <Sidebar
+        collapsed={collapsed}
+        onToggle={() => setCollapsed((c) => !c)}
+        activeSection={section}
+        onSelect={setSection}
+      />
+
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <Topbar
+          activeRange={activePresetId}
+          onRangeChange={handleRangeChange}
+          lastUpdatedLabel={lastUpdatedLabel}
+          startDate={dateRange.start}
+          endDate={dateRange.end}
+        />
+
+        {/* Loading initial state — skeleton shimmer */}
+        {isInitialLoad ? (
+          <SkeletonScreen />
+        ) : error ? (
+          /* Error state — always visible, never hidden */
+          <div
+            className="yc-glass"
+            style={{
+              margin: '32px',
+              padding: 24,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+              alignItems: 'flex-start',
+            }}
+          >
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--yc-text)' }}>
+              No se pudieron cargar los datos
+            </span>
+            <span style={{ fontSize: 12.5, color: 'var(--yc-text-mute)' }}>
+              {error.message}
+            </span>
+            <button
+              onClick={refresh}
+              disabled={isLoading}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 10,
+                border: '1px solid rgba(231,193,90,0.35)',
+                background: 'linear-gradient(180deg, rgba(231,193,90,0.18), rgba(231,193,90,0.06))',
+                color: 'var(--yc-gold-2)',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                opacity: isLoading ? 0.5 : 1,
+                fontFamily: 'inherit',
+              }}
+            >
+              Reintentar
+            </button>
+          </div>
+        ) : (
+          /* Main content scroll area */
+          <div
+            className="yc-scroll"
+            style={{ flex: 1, overflow: 'auto', padding: '20px 32px 32px' }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 1500, margin: '0 auto' }}>
+              {/* Section stubs — will be replaced in Phase 3+ */}
+              {section === 'resumen' && (
+                <div className="yc-glass" style={{ padding: 24 }}>
+                  Resumen — próximamente
+                </div>
+              )}
+              {section === 'ventas' && (
+                <div className="yc-glass" style={{ padding: 24 }}>
+                  Ventas — próximamente
+                </div>
+              )}
+              {section === 'equipo' && (
+                <div className="yc-glass" style={{ padding: 24 }}>
+                  Equipo — próximamente
+                </div>
+              )}
+              {section === 'embudo' && (
+                <div className="yc-glass" style={{ padding: 24 }}>
+                  Embudo — próximamente
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+// ── App ───────────────────────────────────────────────────
 function App() {
   return (
     <AuthProvider>
