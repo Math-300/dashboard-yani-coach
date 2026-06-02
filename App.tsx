@@ -62,6 +62,7 @@ function DashboardShell() {
     if (preset === 'today') return 'today';
     if (preset === 'week') return '7d';
     if (preset === 'month') return 'month';
+    if (preset === 'last_month') return 'last_month';
     if (preset === 'custom') return 'custom';
     return 'custom'; // any other preset (last_30_days etc.) shows as custom in topbar
   });
@@ -90,6 +91,7 @@ function DashboardShell() {
       today: 'today',
       '7d': 'week',
       month: 'month',
+      last_month: 'last_month',
       custom: 'custom',
     };
     const preset: DateRangePreset = presetMap[presetId] ?? 'custom';

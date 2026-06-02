@@ -100,8 +100,13 @@ function ActionableHint({ urgentFollowUps, delay = 0 }: ActionableHintProps) {
 function presetToLabel(presetId: string): string {
   switch (presetId) {
     case 'today': return 'hoy';
-    case '7d': return 'últimos 7 días';
+    case 'yesterday': return 'ayer';
+    case '7d':
+    case 'week': return 'últimos 7 días';
+    case 'last_30_days': return 'últimos 30 días';
     case 'month': return 'este mes';
+    case 'last_month': return 'mes pasado';
+    case 'last_6_months': return 'últimos 6 meses';
     default: return 'período seleccionado';
   }
 }

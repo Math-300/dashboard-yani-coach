@@ -44,7 +44,7 @@ function TeamRow({ person, delay }: TeamRowProps) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 13.5, fontWeight: 600 }}>{person.name}</span>
           <span className="yc-num" style={{ fontSize: 14, fontWeight: 600, color: person.color }}>
-            {fmt.min(time)}
+            {fmt.dur(time)}
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>

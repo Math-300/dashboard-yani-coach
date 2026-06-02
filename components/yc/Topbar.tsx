@@ -11,15 +11,17 @@ const PILL_PRESET_MAP: Record<string, DateRangePreset> = {
   today: 'today',
   '7d': 'week',
   month: 'month',
+  last_month: 'last_month',
 };
 
 const PILL_LABELS: Record<string, string> = {
   today: 'Hoy',
   '7d': 'Últimos 7 días',
   month: 'Este mes',
+  last_month: 'Mes pasado',
 };
 
-const PILL_IDS = ['today', '7d', 'month'] as const;
+const PILL_IDS = ['today', '7d', 'month', 'last_month'] as const;
 
 interface TopbarProps {
   title?: string;
