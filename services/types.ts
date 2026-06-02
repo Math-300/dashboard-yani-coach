@@ -35,6 +35,10 @@ export interface ResponsividadGeneralRow {
   vendedora_nombre: string | null;
   chats_con_tiempo: number;
   resp_mediana_min: number | null;
+  b_menos_15: number;
+  b_15_60: number;
+  b_1_4h: number;
+  b_mas_4h: number;
 }
 
 export interface PlantillaStatRow {

@@ -10,6 +10,16 @@ export interface TeamMember {
   sinRespuesta: number;
   color: string;
   tone: string;
+  dist: { menos15: number; e1560: number; e14h: number; mas4h: number };
+}
+
+function LegendDot({ color, label }: { color: string; label: string }) {
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+      <span style={{ width: 8, height: 8, borderRadius: 2, background: color, display: 'inline-block' }} />
+      <span style={{ fontSize: 10.5, color: 'var(--yc-text-mute)' }}>{label}</span>
+    </span>
+  );
 }
 
 export interface EquipoCardProps {
@@ -59,20 +69,24 @@ function TeamRow({ person, delay }: TeamRowProps) {
           )}
           <span style={{ fontSize: 11, color: 'var(--yc-text-faint)' }}>tiempo típico 30d</span>
         </div>
-        {/* mini bar showing relative response time vs 30min reference */}
-        <div style={{ marginTop: 6, height: 3, background: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden' }}>
-          <div
-            style={{
-              width: hasTime ? `${Math.min(100, ((person.time ?? 0) / 30) * 100)}%` : '0%',
-              height: '100%',
-              background: person.color,
-              opacity: 0.7,
-              transformOrigin: 'left',
-              animation: `yc-bar-grow 0.9s ${delay + 250}ms cubic-bezier(.2,.7,.2,1) forwards`,
-              transform: 'scaleX(0)',
-            }}
-          />
-        </div>
+        {/* distribución del tiempo de respuesta en 4 tramos */}
+        {(() => {
+          const d = person.dist;
+          const tot = d.menos15 + d.e1560 + d.e14h + d.mas4h;
+          if (tot === 0) return <div style={{ marginTop: 7, height: 7 }} />;
+          const seg = (n: number, color: string, label: string) =>
+            n > 0 ? (
+              <div title={`${label}: ${n}`} style={{ width: `${(n / tot) * 100}%`, background: color, height: '100%' }} />
+            ) : null;
+          return (
+            <div style={{ marginTop: 7, height: 7, borderRadius: 4, overflow: 'hidden', display: 'flex', gap: 1, background: 'rgba(255,255,255,0.05)' }}>
+              {seg(d.menos15, 'var(--yc-green)', 'Menos de 15 min')}
+              {seg(d.e1560, 'var(--yc-gold)', '15 min – 1 h')}
+              {seg(d.e14h, '#f0a050', '1 – 4 h')}
+              {seg(d.mas4h, 'var(--yc-red)', 'Más de 4 horas')}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );
@@ -88,6 +102,12 @@ export function EquipoCard({ team, sinAtender, sinRespuestaTotal, delay = 0 }: E
         <h2 style={{ margin: 0, fontSize: 17, fontWeight: 600, letterSpacing: '-0.015em' }}>El equipo</h2>
         <p style={{ margin: '4px 0 0', fontSize: 12.5, color: 'var(--yc-text-mute)' }}>cómo viene cada una</p>
       </header>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: -4 }}>
+        <LegendDot color="var(--yc-green)" label="−15 min" />
+        <LegendDot color="var(--yc-gold)" label="15 m–1 h" />
+        <LegendDot color="#f0a050" label="1–4 h" />
+        <LegendDot color="var(--yc-red)" label="+4 h" />
+      </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {team.map((p, i) => (
           <TeamRow key={p.name} person={p} delay={delay + 200 + i * 150} />

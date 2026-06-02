@@ -152,6 +152,12 @@ function deriveTeam(
       sinRespuesta: filtered?.chats_sin_respuesta ?? 0,
       color: isBest ? 'var(--yc-green)' : 'var(--yc-gold)',
       tone: isBest ? '#1e3a2a' : '#3a2f1c',
+      dist: {
+        menos15: r.b_menos_15,
+        e1560: r.b_15_60,
+        e14h: r.b_1_4h,
+        mas4h: r.b_mas_4h,
+      },
     };
   });
 }

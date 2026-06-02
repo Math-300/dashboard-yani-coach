@@ -431,6 +431,10 @@ export async function getResponsividadGeneral(): Promise<ResponsividadGeneralRow
     vendedora_nombre: d.vendedora_nombre ?? null,
     chats_con_tiempo: Number(d.chats_con_tiempo ?? 0),
     resp_mediana_min: d.resp_mediana_min === null ? null : Number(d.resp_mediana_min),
+    b_menos_15: Number(d.b_menos_15 ?? 0),
+    b_15_60: Number(d.b_15_60 ?? 0),
+    b_1_4h: Number(d.b_1_4h ?? 0),
+    b_mas_4h: Number(d.b_mas_4h ?? 0),
   }));
 }
 
