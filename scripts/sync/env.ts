@@ -25,6 +25,7 @@ export const env = {
   TABLE_INTERACTIONS: process.env.VITE_TABLE_INTERACTIONS?.trim() || 'm6gx25reozjbbt3',
   TABLE_SALES: process.env.VITE_TABLE_SALES?.trim() || 'mm9p02mlk0i5ysy',
   TABLE_ATTEMPTS: process.env.VITE_TABLE_ATTEMPTS?.trim() || 'mqdlglkwjvvtplc',
+  TABLE_TEMPLATES: process.env.VITE_TABLE_TEMPLATES?.trim() || 'mer3gkc3xj2stxj',
 
   SUPABASE_URL: must('SUPABASE_URL'),
   SUPABASE_SERVICE_ROLE_KEY: must('SUPABASE_SERVICE_ROLE_KEY'),

@@ -13,6 +13,7 @@ import { syncInteracciones } from './syncInteracciones.js';
 import { syncVentas } from './syncVentas.js';
 import { syncIntentosCompra } from './syncIntentosCompra.js';
 import { syncChatwoot } from './syncChatwoot.js';
+import { syncPlantillas } from './syncPlantillas.js';
 
 type SyncFn = (tenantId: string, runId: string) => Promise<{ rows: number }>;
 
@@ -24,6 +25,7 @@ const TABLES: Record<string, SyncFn> = {
   interacciones: syncInteracciones,
   ventas: syncVentas,
   intentos_compra: syncIntentosCompra,
+  plantillas: syncPlantillas,
   chatwoot: syncChatwoot,
 };
 
