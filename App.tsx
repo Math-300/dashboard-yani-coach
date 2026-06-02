@@ -8,6 +8,7 @@ import AuthGuard from './auth/AuthGuard';
 import LoginView from './components/LoginView';
 import { loadInitialRange, savePresetSelection, getPresetRange, type DateRangePreset } from './services/dateUtils';
 import { getCacheState } from './services/cacheService';
+import { ResumenView, presetToLabel } from './components/views/ResumenView';
 
 // ── Skeleton (first-paint shimmer) ────────────────────────
 // Ported from diseno-aprobado/dashboard.jsx lines 872-887
@@ -62,6 +63,12 @@ function DashboardShell() {
   });
 
   const {
+    contacts,
+    sales,
+    sellers,
+    kpiCounts,
+    funnelRespondio,
+    responsividad,
     isLoading,
     error,
     refresh,
@@ -150,11 +157,17 @@ function DashboardShell() {
             style={{ flex: 1, overflow: 'auto', padding: '20px 32px 32px' }}
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 1500, margin: '0 auto' }}>
-              {/* Section stubs — will be replaced in Phase 3+ */}
+              {/* ── Section views ─────────────────────── */}
               {section === 'resumen' && (
-                <div className="yc-glass" style={{ padding: 24 }}>
-                  Resumen — próximamente
-                </div>
+                <ResumenView
+                  sales={sales}
+                  funnelRespondio={funnelRespondio}
+                  responsividad={responsividad}
+                  kpiCounts={kpiCounts}
+                  sellers={sellers}
+                  contacts={contacts}
+                  rangeLabel={presetToLabel(activePresetId)}
+                />
               )}
               {section === 'ventas' && (
                 <div className="yc-glass" style={{ padding: 24 }}>

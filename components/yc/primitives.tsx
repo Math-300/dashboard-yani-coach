@@ -153,6 +153,7 @@ export interface MiniRowProps {
   label: string;
   value: string | number;
   accent?: string;
+  key?: React.Key;
 }
 
 /** Single mini-row: label + bold value with optional color */
