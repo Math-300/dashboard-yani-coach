@@ -15,7 +15,7 @@ import { createGuardedRunner, startSchedule } from './scheduler.js';
 const PORT = Number(process.env.PORT ?? 3000);
 const ROOT = resolve(process.cwd());
 const SYNC_ENTRY = resolve(ROOT, 'scripts/sync/index.ts');
-const MAX_DURATION_MS = 15 * 60 * 1000;       // 15 min — margen para backoffs ante throttle 429 de NocoDB Cloud
+const MAX_DURATION_MS = 25 * 60 * 1000;       // 25 min — full sync real ~15min (NocoDB ~7min + Chatwoot ~8min) + FK/MV; margen ante throttle 429 NocoDB y rate-limit Chatwoot
 const SYNC_INTERVAL_MS = 60 * 60 * 1000;      // 1h — frescura del espejo
 
 interface RunResult {
