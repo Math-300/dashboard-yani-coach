@@ -34,13 +34,14 @@ export interface PlantillaStatRow {
   shortcode: string | null;
   descripcion: string | null;
   enviados: number;
-  entregados: number;
-  leidos: number;
   fallidos: number;
+  leidos: number;
   respondidos: number;
-  tasa_entrega: number | null;   // 0..1
-  tasa_apertura: number | null;  // 0..1
-  tasa_respuesta: number | null; // 0..1
+  // Tasas sobre base = enviados - fallidos (el status 'delivered' de Chatwoot es
+  // poco confiable, así que NO reportamos "entrega"; ver migración 20).
+  tasa_fallo: number | null;     // 0..1 — fallidos/enviados
+  tasa_apertura: number | null;  // 0..1 — leidos/base (piso; read receipts off)
+  tasa_respuesta: number | null; // 0..1 — respondidos/base
 }
 
 export interface EmbudoStage {

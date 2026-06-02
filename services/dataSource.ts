@@ -409,11 +409,10 @@ export async function getPlantillasStats(
     shortcode: d.shortcode ?? null,
     descripcion: d.descripcion ?? null,
     enviados: Number(d.enviados ?? 0),
-    entregados: Number(d.entregados ?? 0),
-    leidos: Number(d.leidos ?? 0),
     fallidos: Number(d.fallidos ?? 0),
+    leidos: Number(d.leidos ?? 0),
     respondidos: Number(d.respondidos ?? 0),
-    tasa_entrega: d.tasa_entrega == null ? null : Number(d.tasa_entrega),
+    tasa_fallo: d.tasa_fallo == null ? null : Number(d.tasa_fallo),
     tasa_apertura: d.tasa_apertura == null ? null : Number(d.tasa_apertura),
     tasa_respuesta: d.tasa_respuesta == null ? null : Number(d.tasa_respuesta),
   }));

@@ -40,8 +40,8 @@ const PlantillaCard: React.FC<{ p: PlantillaStatRow }> = ({ p }) => (
       )}
     </div>
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 18 }}>
-      <StatPill label="Enviados" value={fmtNum(p.enviados)} sub={p.fallidos > 0 ? `${fmtNum(p.fallidos)} fallidos` : undefined} />
-      <StatPill label="Entrega" value={fmtPct(p.tasa_entrega)} sub={`${fmtNum(p.entregados)} entregados`} />
+      <StatPill label="Enviados" value={fmtNum(p.enviados)} sub={`${fmtNum(p.enviados - p.fallidos)} salieron OK`} />
+      <StatPill label="Fallaron" value={fmtPct(p.tasa_fallo)} sub={p.fallidos > 0 ? `${fmtNum(p.fallidos)} rechazados` : 'ninguno'} />
       <StatPill label="Apertura" value={fmtPct(p.tasa_apertura)} sub={`${fmtNum(p.leidos)} leídos`} />
       <StatPill label="Respuesta" value={fmtPct(p.tasa_respuesta)} sub={`${fmtNum(p.respondidos)} respondieron`} />
     </div>
@@ -83,8 +83,10 @@ export const PlantillasView: React.FC<PlantillasViewProps> = ({ plantillas, rang
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '12px 14px', color: 'var(--yc-text-faint)', fontSize: 11.5, lineHeight: 1.5 }}>
         <InfoIcon />
         <span>
-          La <strong>apertura</strong> se mide con el read receipt de WhatsApp. Algunos contactos lo tienen
-          desactivado, así que el porcentaje real de lectura puede ser mayor al que se muestra.
+          <strong>Fallaron</strong> = WhatsApp/Meta rechazó el envío (típicamente fuera de la ventana de 24h
+          o por tope de marketing). La <strong>apertura</strong> y la <strong>respuesta</strong> se calculan
+          sobre los que sí salieron. La apertura usa el read receipt de WhatsApp; algunos contactos lo tienen
+          desactivado, así que el valor real de lectura puede ser mayor.
         </span>
       </div>
     </div>
