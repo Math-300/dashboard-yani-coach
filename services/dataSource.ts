@@ -193,7 +193,7 @@ export async function getSales(dateRange?: DateRange | null): Promise<Sale[]> {
   requireTenant();
   let q = supabase
     .from('ventas')
-    .select('nocodb_id, contacto_nocodb_id, vendedora_nocodb_id, producto, amount, fecha, payment_status, sales_cycle_days')
+    .select('nocodb_id, contacto_nocodb_id, vendedora_nocodb_id, producto, amount, fecha, payment_status, sales_cycle_days, raw')
     .eq('tenant_id', TENANT_ID)
     .order('fecha', { ascending: false })
     .limit(SALES_LIMIT);
@@ -214,6 +214,7 @@ export async function getSales(dateRange?: DateRange | null): Promise<Sale[]> {
     date: s.fecha || new Date().toISOString(),
     paymentStatus: s.payment_status || undefined,
     salesCycleDays: s.sales_cycle_days || undefined,
+    category: (s.raw as any)?.['Tipo de Oferta'] || undefined,
   }));
 }
 

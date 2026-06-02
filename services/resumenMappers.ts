@@ -60,8 +60,8 @@ export function buildEmbudo(funnel: FunnelRespondioRow): EmbudoStage[] {
   const L = funnel.leads_nuevos || 0;
   const pct = (n: number) => (L ? Math.round((n / L) * 100) : 0);
   return [
-    { id: 'leads', label: 'Leads nuevos', count: funnel.leads_nuevos, pctOfLeads: 100, dropFromPrev: null },
-    { id: 'primer_mensaje', label: 'Primer mensaje enviado', count: funnel.primer_mensaje, pctOfLeads: pct(funnel.primer_mensaje), dropFromPrev: 0 },
+    { id: 'leads', label: 'Personas nuevas', count: funnel.leads_nuevos, pctOfLeads: 100, dropFromPrev: null },
+    { id: 'primer_mensaje', label: 'El equipo las contactó', count: funnel.primer_mensaje, pctOfLeads: pct(funnel.primer_mensaje), dropFromPrev: 0 },
     { id: 'respondieron', label: 'Respondieron', count: funnel.respondieron, pctOfLeads: pct(funnel.respondieron), dropFromPrev: funnel.primer_mensaje ? Math.round(100 - (funnel.respondieron / funnel.primer_mensaje) * 100) : null, star: true },
     { id: 'interesados', label: 'Interesados', count: funnel.interesados, pctOfLeads: pct(funnel.interesados), dropFromPrev: funnel.respondieron ? Math.round(100 - (funnel.interesados / funnel.respondieron) * 100) : null },
     { id: 'agendo', label: 'Agendó / entró en llamada', count: null, pctOfLeads: 0, dropFromPrev: null, soon: true },

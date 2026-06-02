@@ -102,7 +102,7 @@ function FunnelRow({ stage, leadsNuevos, index, baseDelay }: FunnelRowProps) {
   // Delta annotation derived from stage data
   const hasDelta = stage.id !== 'leads' && !stage.soon;
   const deltaText = (): { label: string; extra: string | null } => {
-    if (stage.id === 'primer_mensaje') return { label: '↓ todas siguen', extra: null };
+    if (stage.id === 'primer_mensaje') return { label: 'todas siguen', extra: null };
     if (stage.dropFromPrev != null && stage.dropFromPrev > 0) {
       const pctAdv = 100 - stage.dropFromPrev;
       const prev =
@@ -115,7 +115,7 @@ function FunnelRow({ stage, leadsNuevos, index, baseDelay }: FunnelRowProps) {
           : null;
       return {
         label: `↓ avanzó el ${pctAdv}%`,
-        extra: lost != null ? `· se cayeron ${lost}` : null,
+        extra: lost != null ? `· no siguieron ${lost}` : null,
       };
     }
     return { label: '↓ avanzó el 100%', extra: null };

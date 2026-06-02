@@ -84,6 +84,7 @@ export interface Sale {
   paymentStatus?: string;      // Estado del Pago (Pagado, Pendiente, etc.)
   salesCycleDays?: number;     // Días del ciclo de venta
   interactionCountSnapshot?: number; // Snapshot de interacciones antes de comprar
+  category?: string; // Tipo de Oferta del CRM (Programa PREMIUM / Producto Digital / Paquete Low cost)
 }
 
 export interface PurchaseAttempt {

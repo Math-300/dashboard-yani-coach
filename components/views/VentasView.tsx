@@ -442,7 +442,7 @@ function VentasTab({ sales, dateRange }: VentasTabProps) {
                   iconType="circle"
                   iconSize={8}
                   formatter={(value) => (
-                    <span style={{ fontSize: 12, color: 'var(--yc-text-mute)' }}>{value}</span>
+                    <span style={{ fontSize: 12.5, color: 'var(--yc-text)' }}>{value}</span>
                   )}
                 />
               </PieChart>

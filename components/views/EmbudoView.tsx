@@ -296,7 +296,7 @@ export default function EmbudoView({ funnelRespondio, rangeLabel }: EmbudoViewPr
                 Etapa por etapa
               </h2>
               <p style={{ margin: 0, fontSize: 12, color: 'var(--yc-text-faint)' }}>
-                conteo · % del total · caída del paso anterior
+                cantidad · % del total · cuántas se perdieron
               </p>
             </div>
           </div>
@@ -316,13 +316,13 @@ export default function EmbudoView({ funnelRespondio, rangeLabel }: EmbudoViewPr
             Etapa
           </div>
           <div style={{ flex: '0 0 80px', textAlign: 'right', fontSize: 11, fontWeight: 600, color: 'var(--yc-text-faint)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-            Leads
+            Personas
           </div>
           <div style={{ flex: '0 0 72px', textAlign: 'right', fontSize: 11, fontWeight: 600, color: 'var(--yc-text-faint)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
             % total
           </div>
           <div style={{ flex: 1, textAlign: 'right', fontSize: 11, fontWeight: 600, color: 'var(--yc-text-faint)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
-            Caída
+            Se perdieron
           </div>
         </div>
 

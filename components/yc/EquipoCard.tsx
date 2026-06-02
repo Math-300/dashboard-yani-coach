@@ -49,7 +49,7 @@ function TeamRow({ person, delay }: TeamRowProps) {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
           <span className="yc-num" style={{ fontSize: 11.5, color: 'var(--yc-text-faint)' }}>
-            {fmt.num(chats)} chats
+            {fmt.num(chats)} respuestas
           </span>
           <span style={{ fontSize: 11, color: 'var(--yc-text-faint)' }}>en responder</span>
         </div>

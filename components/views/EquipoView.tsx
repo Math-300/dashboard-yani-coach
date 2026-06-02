@@ -186,12 +186,12 @@ const SellerRowCard: React.FC<SellerRowCardProps> = function SellerRowCard({ row
           </span>
           {/* Leads */}
           <span style={{ fontSize: 11, color: 'var(--yc-text-faint)' }}>
-            {row.activeLeads} activos
+            {row.activeLeads} leads abiertos
           </span>
           {/* Cycle */}
           {row.avgSalesCycle > 0 && (
             <span style={{ fontSize: 11, color: 'var(--yc-text-faint)' }}>
-              ciclo {row.avgSalesCycle}d
+              {row.avgSalesCycle}d hasta la venta
             </span>
           )}
         </div>
@@ -230,7 +230,7 @@ const SellerRowCard: React.FC<SellerRowCardProps> = function SellerRowCard({ row
           />
         </div>
         <div style={{ fontSize: 10, color: 'var(--yc-text-faint)', marginTop: 3 }}>
-          {row.chatsRespondidos > 0 ? `${row.chatsRespondidos} chats` : 'sin datos'}
+          {row.chatsRespondidos > 0 ? `${row.chatsRespondidos} respuestas` : 'sin datos'}
         </div>
       </div>
     </div>
@@ -349,7 +349,7 @@ function Insights({ rows }: InsightProps) {
                 className="yc-num"
                 style={{ fontSize: 12, color: 'var(--yc-text-mute)', marginTop: 1 }}
               >
-                {fmt.min(fastest.respMedianaMin!)} mediana · {fastest.chatsRespondidos} chats
+                {fmt.min(fastest.respMedianaMin!)} mediana · {fastest.chatsRespondidos} respuestas
               </div>
             </div>
           </div>
@@ -778,7 +778,7 @@ export default function EquipoView({
               <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, letterSpacing: '-0.015em' }}>
                 Eficiencia del equipo
               </h2>
-              <span style={{ fontSize: 12, color: 'var(--yc-text-faint)' }}>· ciclo, toques, antigüedad</span>
+              <span style={{ fontSize: 12, color: 'var(--yc-text-faint)' }}>· días, mensajes, espera</span>
             </header>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -789,7 +789,7 @@ export default function EquipoView({
                       borderBottom: '1px solid var(--yc-border)',
                     }}
                   >
-                    {['Asesora', 'Leads nuevos', 'Ciclo venta', 'Antigüedad activa', 'Toques/cierre', 'Leads activos'].map(
+                    {['Asesora', 'Leads nuevos', 'Días hasta la venta', 'Días esperando', 'Mensajes para cerrar', 'Leads abiertos'].map(
                       (h) => (
                         <th
                           key={h}

@@ -171,7 +171,7 @@ export function MiniRow({ label, value, accent }: MiniRowProps) {
 export const fmt = {
   ars: (n: number) => `$${Math.round(n).toLocaleString('es-AR')}`,
   num: (n: number) => Math.round(n).toLocaleString('es-AR'),
-  min: (n: number) => `${Math.round(n)} min`,
+  min: (n: number) => formatDuration(n),
   dur: (n: number) => formatDuration(n),
 };
 

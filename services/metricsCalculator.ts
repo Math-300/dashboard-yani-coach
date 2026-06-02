@@ -389,26 +389,11 @@ export const calculateRevenueByProduct = (sales: Sale[]): ProductRevenue[] => {
 export const calculateRevenueByCategory = (sales: Sale[]): CategoryRevenue[] => {
     if (sales.length === 0) return [];
 
-    // Función para inferir categoría del nombre del producto
-    const inferCategory = (productName: string): string => {
-        const name = productName.toLowerCase();
-        if (name.includes('premier') || name.includes('premium') || name.includes('vip')) {
-            return 'Premier';
-        }
-        if (name.includes('digital') || name.includes('curso') || name.includes('ebook')) {
-            return 'Digital';
-        }
-        if (name.includes('membresía') || name.includes('membresia') || name.includes('suscripción') || name.includes('suscripcion')) {
-            return 'Membresía';
-        }
-        return 'Otros';
-    };
-
-    // Agrupar por categoría
+    // Agrupar por categoría usando el campo real del CRM
     const categoryMap = new Map<string, { revenue: number; count: number }>();
 
     sales.forEach(sale => {
-        const category = inferCategory(sale.productName);
+        const category = sale.category || 'Sin categoría';
         const existing = categoryMap.get(category) || { revenue: 0, count: 0 };
         categoryMap.set(category, {
             revenue: existing.revenue + (sale.amount || 0),

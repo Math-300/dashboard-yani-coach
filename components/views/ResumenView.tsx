@@ -193,7 +193,7 @@ export function ResumenView({
     },
     ...respuesta.porVendedora.map((r) => ({
       label: shortName(r.vendedora_nombre),
-      value: `${formatDuration(r.resp_mediana_min ?? 0)} · ${r.chats_respondidos} chats`,
+      value: `${formatDuration(r.resp_mediana_min ?? 0)} · ${r.chats_respondidos} respuestas`,
     })),
   ];
 
