@@ -14,23 +14,34 @@ interface PageResponse {
 }
 
 const PAGE_SIZE = 100;
-const DELAY_MS = 250; // protección contra rate limit NocoDB (con retry/backoff en fetchPage)
+const DELAY_MS = 350; // protección contra rate limit NocoDB (con retry/backoff en fetchPage)
+const MAX_ATTEMPTS = 8;
+const MAX_BACKOFF_MS = 30000;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function fetchPage(tableId: string, offset: number): Promise<PageResponse> {
   const url = `${env.NOCODB_URL}/api/v2/tables/${tableId}/records?limit=${PAGE_SIZE}&offset=${offset}`;
-  // Reintento con backoff ante 429 (rate limit) y 5xx transitorios.
-  for (let attempt = 1; attempt <= 5; attempt++) {
+  // Reintento con backoff exponencial ante 429 (rate limit NocoDB Cloud) y 5xx
+  // transitorios. Honra el header `Retry-After` si el server lo manda.
+  let lastStatus = 0;
+  let lastText = '';
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     const res = await fetch(url, { headers: { 'xc-token': env.NOCODB_TOKEN } });
     if (res.ok) return res.json() as Promise<PageResponse>;
-    if ((res.status === 429 || res.status >= 500) && attempt < 5) {
-      await sleep(1000 * attempt); // 1s, 2s, 3s, 4s
+    lastStatus = res.status;
+    lastText = res.statusText;
+    if ((res.status === 429 || res.status >= 500) && attempt < MAX_ATTEMPTS) {
+      const retryAfter = Number(res.headers.get('retry-after'));
+      const backoff = Number.isFinite(retryAfter) && retryAfter > 0
+        ? Math.min(MAX_BACKOFF_MS, retryAfter * 1000)
+        : Math.min(MAX_BACKOFF_MS, 1000 * 2 ** (attempt - 1)); // 1,2,4,8,16,30,30s
+      await sleep(backoff);
       continue;
     }
     throw new Error(`NocoDB ${tableId} offset=${offset}: ${res.status} ${res.statusText}`);
   }
-  throw new Error(`NocoDB ${tableId} offset=${offset}: agotados los reintentos`);
+  throw new Error(`NocoDB ${tableId} offset=${offset}: agotados ${MAX_ATTEMPTS} reintentos (${lastStatus} ${lastText})`);
 }
 
 export async function fetchAllRows(

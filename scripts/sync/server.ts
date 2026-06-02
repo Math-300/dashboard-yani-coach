@@ -15,7 +15,7 @@ import { createGuardedRunner, startSchedule } from './scheduler.js';
 const PORT = Number(process.env.PORT ?? 3000);
 const ROOT = resolve(process.cwd());
 const SYNC_ENTRY = resolve(ROOT, 'scripts/sync/index.ts');
-const MAX_DURATION_MS = 10 * 60 * 1000;       // 10 min — el sync real tarda ~90s
+const MAX_DURATION_MS = 15 * 60 * 1000;       // 15 min — margen para backoffs ante throttle 429 de NocoDB Cloud
 const SYNC_INTERVAL_MS = 60 * 60 * 1000;      // 1h — frescura del espejo
 
 interface RunResult {
@@ -37,7 +37,8 @@ function runPipeline(): Promise<RunResult> {
     });
     const timer = setTimeout(() => {
       child.kill('SIGTERM');
-      setTimeout(() => child.kill('SIGKILL'), 5000);
+      const killTimer = setTimeout(() => child.kill('SIGKILL'), 5000);
+      child.once('close', () => clearTimeout(killTimer));
     }, MAX_DURATION_MS);
 
     child.stdout.on('data', (d) => chunks.push(d.toString()));
@@ -71,12 +72,11 @@ app.get('/health', (_req, res) => {
 
 app.post('/run', async (_req, res) => {
   const out = await runner.trigger();
-  if (out.skipped) {
+  if (out.skipped === true) {
     res.status(409).json({ ok: false, error: 'sync already in progress' });
-  } else {
-    const r = (out as { skipped: false; result: RunResult }).result;
-    res.status(r.ok ? 200 : 500).json(r);
+    return;
   }
+  res.status(out.result.ok ? 200 : 500).json(out.result);
 });
 
 app.listen(PORT, '0.0.0.0', () => {
@@ -84,12 +84,11 @@ app.listen(PORT, '0.0.0.0', () => {
   startSchedule(SYNC_INTERVAL_MS, async () => {
     console.log('[scheduler] disparando sync programado...');
     const out = await runner.trigger();
-    if (out.skipped) {
+    if (out.skipped === true) {
       console.warn('[scheduler] sync ya en curso, salteo esta vuelta');
-    } else {
-      const r = (out as { skipped: false; result: RunResult }).result;
-      if (!r.ok) console.error('[scheduler] sync falló:', r.log);
-      else console.log(`[scheduler] sync ok en ${r.elapsed_ms}ms`);
+      return;
     }
+    if (!out.result.ok) console.error('[scheduler] sync falló:', out.result.log);
+    else console.log(`[scheduler] sync ok en ${out.result.elapsed_ms}ms`);
   });
 });
