@@ -1,5 +1,6 @@
 // Yani Coach Dashboard — shared primitive components and hooks
 import React, { useState, useEffect, useRef, useId } from 'react';
+import { formatDuration } from '../../services/format';
 
 // ── HOOKS ─────────────────────────────────────────────────
 
@@ -171,6 +172,7 @@ export const fmt = {
   ars: (n: number) => `$${Math.round(n).toLocaleString('es-AR')}`,
   num: (n: number) => Math.round(n).toLocaleString('es-AR'),
   min: (n: number) => `${Math.round(n)} min`,
+  dur: (n: number) => formatDuration(n),
 };
 
 // Silence unused import warning — useRef is available for consumers
