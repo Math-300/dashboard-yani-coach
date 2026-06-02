@@ -432,6 +432,7 @@ function VentasTab({ sales, dateRange }: VentasTabProps) {
                   outerRadius={90}
                   paddingAngle={2}
                   dataKey="revenue"
+                  nameKey="category"
                 >
                   {metrics.categoryRevenue.map((_, i) => (
                     <Cell key={i} fill={GOLD_PALETTE[i % GOLD_PALETTE.length]} />
