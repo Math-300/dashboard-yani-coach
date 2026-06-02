@@ -26,7 +26,7 @@ import {
   PurchaseAttemptStatus,
   KpiCounts,
 } from '../types';
-import type { DateRange, FunnelCounts, FunnelRespondioRow, ResponsividadVendedoraRow } from './types';
+import type { DateRange, FunnelCounts, FunnelRespondioRow, ResponsividadVendedoraRow, PlantillaStatRow } from './types';
 import { supabase, TENANT_ID } from './supabaseClient';
 
 // ============================================================================
@@ -393,6 +393,30 @@ export async function getFunnelRespondio(
         ? null
         : Number(row.tiempo_resp_mediana_min),
   };
+}
+
+export async function getPlantillasStats(
+  dateRange?: DateRange | null,
+): Promise<PlantillaStatRow[]> {
+  const { data, error } = await supabase.rpc('get_plantillas_stats', {
+    p_tenant_id: TENANT_ID,
+    p_start: dateRange?.start.toISOString() ?? null,
+    p_end: dateRange?.end.toISOString() ?? null,
+  });
+  if (error) throw error;
+  return ((data as any[]) ?? []).map((d) => ({
+    template_name: String(d.template_name),
+    shortcode: d.shortcode ?? null,
+    descripcion: d.descripcion ?? null,
+    enviados: Number(d.enviados ?? 0),
+    entregados: Number(d.entregados ?? 0),
+    leidos: Number(d.leidos ?? 0),
+    fallidos: Number(d.fallidos ?? 0),
+    respondidos: Number(d.respondidos ?? 0),
+    tasa_entrega: d.tasa_entrega == null ? null : Number(d.tasa_entrega),
+    tasa_apertura: d.tasa_apertura == null ? null : Number(d.tasa_apertura),
+    tasa_respuesta: d.tasa_respuesta == null ? null : Number(d.tasa_respuesta),
+  }));
 }
 
 /** Responsividad (mediana de respuesta) por vendedora. */

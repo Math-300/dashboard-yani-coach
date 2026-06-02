@@ -29,6 +29,20 @@ export interface ResponsividadVendedoraRow {
   resp_mediana_min: number | null;
 }
 
+export interface PlantillaStatRow {
+  template_name: string;
+  shortcode: string | null;
+  descripcion: string | null;
+  enviados: number;
+  entregados: number;
+  leidos: number;
+  fallidos: number;
+  respondidos: number;
+  tasa_entrega: number | null;   // 0..1
+  tasa_apertura: number | null;  // 0..1
+  tasa_respuesta: number | null; // 0..1
+}
+
 export interface EmbudoStage {
   id: 'leads' | 'primer_mensaje' | 'respondieron' | 'interesados' | 'venta_cerrada' | 'agendo';
   label: string;
