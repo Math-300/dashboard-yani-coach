@@ -94,7 +94,7 @@ export function KpiCard({
             </span>
           )}
           {!change && sub && (
-            <span style={{ fontSize: 12.5, color: 'var(--yc-text-faint)' }}>{sub}</span>
+            <span style={{ fontSize: 13, color: 'var(--yc-text-mute)', lineHeight: 1.35 }}>{sub}</span>
           )}
         </div>
         {spark && spark.length >= 2 && (

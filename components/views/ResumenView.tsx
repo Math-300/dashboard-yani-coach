@@ -7,6 +7,7 @@ import { KpiCard } from '../yc/KpiCard';
 import { Funnel } from '../yc/Funnel';
 import { EquipoCard, type TeamMember } from '../yc/EquipoCard';
 import { fmt } from '../yc/primitives';
+import { formatDuration } from '../../services/format';
 import {
   ventasCard,
   respuestaCard,
@@ -187,7 +188,7 @@ export function ResumenView({
     },
     ...respuesta.porVendedora.map((r) => ({
       label: shortName(r.vendedora_nombre),
-      value: `${Math.round(r.resp_mediana_min ?? 0)} min · ${r.chats_respondidos} chats`,
+      value: `${formatDuration(r.resp_mediana_min ?? 0)} · ${r.chats_respondidos} chats`,
     })),
   ];
 
@@ -216,7 +217,9 @@ export function ResumenView({
           question="¿Cuánto vendimos?"
           valueRaw={ventas.total}
           valueDisplay={fmt.ars}
-          sub={ventas.count === 0 ? 'sin ventas en el período' : undefined}
+          sub={ventas.count === 0
+            ? 'sin ventas en el período'
+            : `en ${ventas.count} ${ventas.count === 1 ? 'venta' : 'ventas'}`}
           spark={ventasSpark.length > 0 ? ventasSpark : undefined}
           mini={ventasMini}
         />
@@ -226,18 +229,18 @@ export function ResumenView({
           accent="var(--yc-blue)"
           question="¿El equipo responde bien?"
           valueRaw={respuesta.medianaMin}
-          valueDisplay={(v) => `${Math.round(v)} min`}
-          sub="tiempo promedio en contestar al lead"
+          valueDisplay={(v) => formatDuration(v)}
+          sub="tardan en contestar al lead"
           mini={respMini}
         />
         <KpiCard
           delay={320}
           icon={Icons.Target}
           accent="var(--yc-green)"
-          question="¿Dónde está la gente?"
+          question="¿Cuántos respondieron?"
           valueRaw={leads.respondieron}
-          valueDisplay={fmt.num}
-          sub={`${leads.respondieron} respondieron de ${leads.leadsNuevos} nuevos`}
+          valueDisplay={(n) => `${fmt.num(n)} de ${fmt.num(leads.leadsNuevos)}`}
+          sub="leads nuevos te contestaron"
           spark={leadsSpark.length > 0 ? leadsSpark : undefined}
           mini={leadsMini}
         />
