@@ -1,5 +1,5 @@
 import { listConversations, listMessages } from './chatwootClient.js';
-import { deriveRespondio } from './respondio.js';
+import { deriveRespondio, deriveTemplateSends } from './respondio.js';
 import { supabaseAdmin } from './supabaseAdmin.js';
 import { chunk } from './helpers.js';
 
@@ -25,12 +25,40 @@ interface ConvRecord {
   synced_at: string;
 }
 
+interface PlantillaEnvioRecord {
+  tenant_id: string;
+  chatwoot_conversation_id: number;
+  chatwoot_message_id: number;
+  template_name: string;
+  es_masivo: boolean;
+  enviado_at: string | null;
+  status: string | null;
+  entregado: boolean;
+  leido: boolean;
+  fallido: boolean;
+  contacto_nocodb_id: number | null;
+  respondido: boolean;
+  synced_at: string;
+}
+
 const isoFromEpoch = (s: number | null): string | null =>
   s ? new Date(s * 1000).toISOString() : null;
 
 export async function syncChatwoot(tenantId: string, runId: string) {
   console.log('\n=== Sync Chatwoot ===');
   const started = Date.now();
+
+  // Set de templates masivos (a excluir del panel de día a día). Lo llena syncPlantillas,
+  // que corre antes en el orquestador.
+  const { data: catalogMasivos } = await supabaseAdmin
+    .from('plantillas_catalogo')
+    .select('template_name')
+    .eq('tenant_id', tenantId)
+    .eq('es_masivo', true);
+  const masivoSet = new Set((catalogMasivos ?? []).map((r) => r.template_name as string));
+  console.log(`  ${masivoSet.size} templates masivos a excluir`);
+
+  const envios: PlantillaEnvioRecord[] = [];
 
   const convs = await listConversations();
   console.log(`  ${convs.length} conversaciones listadas`);
@@ -45,6 +73,23 @@ export async function syncChatwoot(tenantId: string, runId: string) {
       const c = convs[idx];
       const messages = await listMessages(c.id);
       const r = deriveRespondio(messages);
+      for (const ts of deriveTemplateSends(messages)) {
+        envios.push({
+          tenant_id: tenantId,
+          chatwoot_conversation_id: c.id,
+          chatwoot_message_id: ts.chatwoot_message_id,
+          template_name: ts.template_name,
+          es_masivo: masivoSet.has(ts.template_name),
+          enviado_at: isoFromEpoch(ts.enviado_at),
+          status: ts.status,
+          entregado: ts.entregado,
+          leido: ts.leido,
+          fallido: ts.fallido,
+          contacto_nocodb_id: c.contact_nocodb_id,
+          respondido: ts.respondido,
+          synced_at: new Date().toISOString(),
+        });
+      }
       records[idx] = {
         tenant_id: tenantId,
         chatwoot_conversation_id: c.id,
@@ -88,6 +133,32 @@ export async function syncChatwoot(tenantId: string, runId: string) {
     }
     upserted += count ?? batch.length;
   }
+
+  // Dedup defensivo por chatwoot_message_id (último gana) y upsert.
+  const enviosByMsg = new Map<number, PlantillaEnvioRecord>();
+  for (const e of envios) enviosByMsg.set(e.chatwoot_message_id, e);
+  const enviosUnicos = [...enviosByMsg.values()];
+  let enviosUpserted = 0;
+  for (const batch of chunk(enviosUnicos, BATCH_SIZE)) {
+    const { error, count } = await supabaseAdmin
+      .from('plantillas_envios')
+      .upsert(batch, {
+        onConflict: 'tenant_id,chatwoot_message_id',
+        ignoreDuplicates: false,
+        count: 'exact',
+      });
+    if (error) {
+      await supabaseAdmin.from('sync_runs').update({
+        status: 'error',
+        finished_at: new Date().toISOString(),
+        rows_failed: batch.length,
+        error: { message: error.message, details: error.details, hint: error.hint },
+      }).eq('id', runId);
+      throw error;
+    }
+    enviosUpserted += count ?? batch.length;
+  }
+  console.log(`  ✓ ${enviosUpserted} envíos de template upserted`);
 
   const elapsed = ((Date.now() - started) / 1000).toFixed(1);
   console.log(`  ✓ ${upserted} conversaciones upserted en ${elapsed}s`);
