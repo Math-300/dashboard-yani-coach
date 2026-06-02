@@ -4,8 +4,14 @@
 import assert from 'node:assert/strict';
 import { deriveRespondio, type ChatwootMessage } from './respondio.js';
 
-function msg(type: 0 | 1 | 2, ts: number, priv = false): ChatwootMessage {
-  return { message_type: type, created_at: ts, private: priv };
+// helper extendido (reemplaza el msg() existente)
+function msg(
+  type: 0 | 1 | 2,
+  ts: number,
+  priv = false,
+  extra: Partial<ChatwootMessage> = {},
+): ChatwootMessage {
+  return { message_type: type, created_at: ts, private: priv, ...extra };
 }
 
 // 1) Lead respondió al template
@@ -63,4 +69,44 @@ function msg(type: 0 | 1 | 2, ts: number, priv = false): ChatwootMessage {
   assert.equal(r.tiempo_primera_respuesta_seg, null);
 }
 
-console.log('✓ deriveRespondio: 7/7 casos pasaron');
+// 8) El primer outbound es un template → NO cuenta como respuesta humana
+{
+  const r = deriveRespondio([
+    msg(0, 100),
+    msg(1, 110, false, { is_template_replay: true, template_name: 'bienvenida_plataforma_v2' }),
+    msg(1, 400, false, { sender_name: 'María del Carmen Vera' }),
+  ]);
+  assert.equal(r.respondio, true);
+  assert.equal(r.tiempo_primera_respuesta_seg, 300); // 400-100, ignora el template a los 110
+}
+
+// 9) El outbound rápido es de la cuenta automática → NO cuenta
+{
+  const r = deriveRespondio([
+    msg(0, 100),
+    msg(1, 102, false, { sender_name: 'Yanina Zapino' }),
+    msg(1, 700, false, { sender_name: 'María Beatriz Juzviachik' }),
+  ]);
+  assert.equal(r.tiempo_primera_respuesta_seg, 600); // 700-100, ignora el auto a los 102
+}
+
+// 10) Solo hay respuesta automática → tiempo humano null
+{
+  const r = deriveRespondio([
+    msg(0, 100),
+    msg(1, 105, false, { is_template_replay: true, template_name: 'revision_perfil_ig' }),
+  ]);
+  assert.equal(r.respondio, false); // el lead no escribió después
+  assert.equal(r.tiempo_primera_respuesta_seg, null);
+}
+
+// 11) automationSenders configurable
+{
+  const r = deriveRespondio(
+    [msg(0, 100), msg(1, 150, false, { sender_name: 'Bot X' })],
+    { automationSenders: new Set(['Bot X']) },
+  );
+  assert.equal(r.tiempo_primera_respuesta_seg, null);
+}
+
+console.log('✓ deriveRespondio: 11/11 casos pasaron');
