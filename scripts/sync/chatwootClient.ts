@@ -81,9 +81,17 @@ export async function listMessages(conversationId: number): Promise<ChatwootMess
     `${BASE}/conversations/${conversationId}/messages`,
   );
   const payload = json.payload ?? [];
-  return payload.map((m) => ({
-    message_type: m.message_type,
-    created_at: m.created_at,
-    private: m.private ?? false,
-  }));
+  return payload.map((m) => {
+    const ca = m.content_attributes ?? {};
+    return {
+      message_type: m.message_type,
+      created_at: m.created_at,
+      private: m.private ?? false,
+      id: m.id ?? null,
+      status: m.status ?? null,
+      is_template_replay: ca.is_template_replay === true,
+      template_name: ca.template_name ?? null,
+      sender_name: m.sender?.name ?? null,
+    };
+  });
 }

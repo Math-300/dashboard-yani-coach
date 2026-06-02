@@ -3,9 +3,14 @@
  * a partir de los mensajes de UNA conversación de Chatwoot. Sin I/O.
  */
 export interface ChatwootMessage {
-  message_type: 0 | 1 | 2 | 3; // 0=inbound (lead), 1=outbound (asesora), 2=activity
+  message_type: 0 | 1 | 2 | 3; // 0=inbound (lead), 1=outbound (asesora/auto), 2=activity
   created_at: number;          // epoch en segundos
   private?: boolean;           // notas internas
+  id?: number;                 // id del mensaje (idempotencia de plantillas_envios)
+  status?: string | null;      // sent | delivered | read | failed
+  is_template_replay?: boolean;// true si es un template de WhatsApp
+  template_name?: string | null;
+  sender_name?: string | null; // nombre del emisor (para excluir cuenta automática)
 }
 
 export interface RespondioResult {
