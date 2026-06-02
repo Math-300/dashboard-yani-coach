@@ -263,15 +263,16 @@ export interface SummaryMetrics {
 export async function getSummaryMetrics(dateRange?: DateRange | null): Promise<SummaryMetrics> {
   requireTenant();
 
-  const [funnel, interactionsByType, kpis] = await Promise.all([
-    getFunnelCounts(),
-    getInteractionCounts(dateRange),
-    getKpiCounts(dateRange),
-  ]);
+  // El diseño nuevo NO usa funnelCounts (embudo por estado_actual, global) ni
+  // interactionCounts: el embudo sale de get_funnel_respondio (fechado) y las
+  // interacciones por canal se derivan en EquipoView desde el array `interactions`.
+  // Solo se necesita kpiCounts. Omitir los otros dos evita 2 queries por refresco
+  // y el 500 transitorio de get_interaction_counts tras recargas del schema cache.
+  const kpis = await getKpiCounts(dateRange);
 
   return {
-    funnelCounts: funnel,
-    interactionCounts: interactionsByType,
+    funnelCounts: {},
+    interactionCounts: {},
     kpiCounts: kpis,
   };
 }

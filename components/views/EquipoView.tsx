@@ -182,7 +182,7 @@ const SellerRowCard: React.FC<SellerRowCardProps> = function SellerRowCard({ row
               border: `1px solid ${row.closeRate > 10 ? 'rgba(78,201,138,0.25)' : 'rgba(231,193,90,0.2)'}`,
             }}
           >
-            {row.closeRate.toFixed(0)}% cierre
+            {row.closeRate.toFixed(0)}% conversión
           </span>
           {/* Leads */}
           <span style={{ fontSize: 11, color: 'var(--yc-text-faint)' }}>
@@ -423,12 +423,12 @@ export default function EquipoView({
         const salesCount = sellerSales.length;
         const salesAmount = sellerSales.reduce((sum, s) => sum + (s.amount ?? 0), 0);
 
-        // ── Close rate ──
+        // ── Conversión (histórica) ──
+        // El ciclo de venta ronda ~139 días: contar contactos en estado "Venta Cerrada"
+        // dentro del rango da casi siempre 0 (los leads nuevos aún no compran). La conversión
+        // honesta y estable es ventas/leads del rollup all-time de la vendedora.
         const allContacts = contacts.filter((c) => c.assignedSellerId === seller.id);
-        const won = allContacts.filter((c) => c.status === LeadStatus.CLOSED_WON).length;
-        const lost = allContacts.filter((c) => c.status === LeadStatus.CLOSED_LOST).length;
-        const resolved = won + lost;
-        const closeRate = resolved > 0 ? (won / resolved) * 100 : 0;
+        const closeRate = seller.leadsTotal > 0 ? (seller.salesCount / seller.leadsTotal) * 100 : 0;
 
         // ── Active leads ──
         const activeStatuses = [LeadStatus.NEW, LeadStatus.CONTACTED, LeadStatus.INTERESTED];
