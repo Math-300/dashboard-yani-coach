@@ -419,11 +419,11 @@ export async function getPlantillasStats(
   }));
 }
 
-/** Responsividad GENERAL estable (últimos 90 días, NO atada al filtro del dashboard). */
+/** Responsividad GENERAL estable (últimos 30 días, NO atada al filtro del dashboard). */
 export async function getResponsividadGeneral(): Promise<ResponsividadGeneralRow[]> {
   const { data, error } = await supabase.rpc('get_responsividad_general', {
     p_tenant_id: TENANT_ID,
-    p_days: 90,
+    p_days: 30,
   });
   if (error) throw error;
   return ((data as any[]) ?? []).map((d) => ({

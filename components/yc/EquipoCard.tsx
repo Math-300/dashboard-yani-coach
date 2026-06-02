@@ -57,7 +57,7 @@ function TeamRow({ person, delay }: TeamRowProps) {
           ) : (
             <span style={{ fontSize: 11.5, color: 'var(--yc-text-mute)' }}>al día</span>
           )}
-          <span style={{ fontSize: 11, color: 'var(--yc-text-faint)' }}>tiempo típico 90d</span>
+          <span style={{ fontSize: 11, color: 'var(--yc-text-faint)' }}>tiempo típico 30d</span>
         </div>
         {/* mini bar showing relative response time vs 30min reference */}
         <div style={{ marginTop: 6, height: 3, background: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden' }}>
