@@ -5,7 +5,7 @@ import { Icons } from './icons';
 import { logout } from '../../services/authService';
 import { useAuth } from '../../auth/AuthContext';
 
-export type SectionId = 'resumen' | 'ventas' | 'equipo' | 'embudo';
+export type SectionId = 'resumen' | 'ventas' | 'equipo' | 'embudo' | 'plantillas';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -98,10 +98,10 @@ export function Sidebar({ collapsed, onToggle, activeSection, onSelect }: Sideba
     { id: 'ventas', label: 'Ventas', Icon: Icons.Sales, active: activeSection === 'ventas' },
     { id: 'equipo', label: 'Equipo', Icon: Icons.Team, active: activeSection === 'equipo' },
     { id: 'embudo', label: 'Embudo', Icon: Icons.Funnel, active: activeSection === 'embudo' },
+    { id: 'plantillas', label: 'Plantillas', Icon: Icons.Templates, active: activeSection === 'plantillas' },
   ];
 
   const soonItems: NavItem[] = [
-    { id: 'plantillas', label: 'Plantillas', Icon: Icons.Templates },
     { id: 'masivos', label: 'Masivos WhatsApp', Icon: Icons.Whats },
     { id: 'clientes', label: 'Clientes', Icon: Icons.Clients },
   ];

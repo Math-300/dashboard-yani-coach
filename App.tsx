@@ -12,6 +12,7 @@ import { ResumenView, presetToLabel } from './components/views/ResumenView';
 import VentasView from './components/views/VentasView';
 import EquipoView from './components/views/EquipoView';
 import EmbudoView from './components/views/EmbudoView';
+import PlantillasView from './components/views/PlantillasView';
 
 // ── Skeleton (first-paint shimmer) ────────────────────────
 // Ported from diseno-aprobado/dashboard.jsx lines 872-887
@@ -74,6 +75,7 @@ function DashboardShell() {
     kpiCounts,
     funnelRespondio,
     responsividad,
+    plantillas,
     isLoading,
     error,
     refresh,
@@ -196,6 +198,12 @@ function DashboardShell() {
               {section === 'embudo' && (
                 <EmbudoView
                   funnelRespondio={funnelRespondio}
+                  rangeLabel={presetToLabel(activePresetId)}
+                />
+              )}
+              {section === 'plantillas' && (
+                <PlantillasView
+                  plantillas={plantillas}
                   rangeLabel={presetToLabel(activePresetId)}
                 />
               )}
