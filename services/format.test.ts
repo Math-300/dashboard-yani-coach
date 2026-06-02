@@ -1,6 +1,8 @@
 import { formatDuration } from './format';
 
 console.assert(formatDuration(0) === '0 min', `0 → ${formatDuration(0)}`);
+console.assert(formatDuration(0.3) === '< 1 min', `0.3 → ${formatDuration(0.3)}`);
+console.assert(formatDuration(0.9) === '< 1 min', `0.9 → ${formatDuration(0.9)}`);
 console.assert(formatDuration(8) === '8 min', `8 → ${formatDuration(8)}`);
 console.assert(formatDuration(45) === '45 min', `45 → ${formatDuration(45)}`);
 console.assert(formatDuration(59) === '59 min', `59 → ${formatDuration(59)}`);

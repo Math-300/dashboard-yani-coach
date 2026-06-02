@@ -65,20 +65,21 @@ function ResultCard({ kind, target, delay }: ResultCardProps) {
 interface FunnelRowProps {
   stage: EmbudoStage;
   leadsNuevos: number;
+  primerMensaje: number;
   index: number;
   baseDelay: number;
   key?: React.Key;
 }
 
-function buildHint(stage: EmbudoStage, leadsNuevos: number): string {
+function buildHint(stage: EmbudoStage, leadsNuevos: number, primerMensaje: number): string {
   if (stage.soon) return 'se activa cuando conectes Calendly';
   if (stage.id === 'leads') return 'todas las que entraron en el período';
   if (stage.id === 'primer_mensaje') {
     return `contactadas por el equipo · ${stage.pctOfLeads}%`;
   }
   if (stage.star) {
-    // respondieron
-    const cold = leadsNuevos - (stage.count ?? 0);
+    // respondieron: se enfriaron = contactadas - respondieron (no todas las nuevas)
+    const cold = primerMensaje - (stage.count ?? 0);
     return `contestaron ${stage.pctOfLeads}% · se enfriaron ${cold}`;
   }
   if (stage.id === 'interesados') {
@@ -88,7 +89,7 @@ function buildHint(stage: EmbudoStage, leadsNuevos: number): string {
   return '';
 }
 
-function FunnelRow({ stage, leadsNuevos, index, baseDelay }: FunnelRowProps) {
+function FunnelRow({ stage, leadsNuevos, primerMensaje, index, baseDelay }: FunnelRowProps) {
   const delay = baseDelay + index * 110;
   const widthPct = stage.count != null ? (stage.count / leadsNuevos) * 100 : 55;
   const animated = useCountUp(stage.count ?? 0, {
@@ -97,21 +98,21 @@ function FunnelRow({ stage, leadsNuevos, index, baseDelay }: FunnelRowProps) {
     enabled: !stage.soon,
   }) as number;
 
-  const hint = buildHint(stage, leadsNuevos);
+  const hint = buildHint(stage, leadsNuevos, primerMensaje);
 
   // Delta annotation derived from stage data
   const hasDelta = stage.id !== 'leads' && !stage.soon;
   const deltaText = (): { label: string; extra: string | null } => {
-    if (stage.id === 'primer_mensaje') return { label: 'todas siguen', extra: null };
     if (stage.dropFromPrev != null && stage.dropFromPrev > 0) {
       const pctAdv = 100 - stage.dropFromPrev;
-      const prev =
+      // "no siguieron" = lost from the immediate previous stage
+      const prevCount =
         stage.id === 'respondieron'
-          ? leadsNuevos          // primer_mensaje == leadsNuevos in most cases
+          ? primerMensaje   // caída desde contactadas, no desde leads nuevos
           : null;
       const lost =
-        stage.id === 'respondieron' && prev != null
-          ? prev - (stage.count ?? 0)
+        stage.id === 'respondieron' && prevCount != null
+          ? prevCount - (stage.count ?? 0)
           : null;
       return {
         label: `↓ avanzó el ${pctAdv}%`,
@@ -146,7 +147,7 @@ function FunnelRow({ stage, leadsNuevos, index, baseDelay }: FunnelRowProps) {
               {stage.label}
             </span>
           </div>
-          <span style={{ fontSize: 11, color: 'var(--yc-text-faint)' }}>{hint}</span>
+          <span style={{ fontSize: 12, color: 'var(--yc-text-faint)' }}>{hint}</span>
         </div>
 
         {/* bar */}
@@ -232,7 +233,7 @@ function FunnelRow({ stage, leadsNuevos, index, baseDelay }: FunnelRowProps) {
         >
           <span
             style={{
-              fontSize: 11,
+              fontSize: 12,
               color: stage.star ? 'var(--yc-blue)' : 'var(--yc-text-faint)',
               fontWeight: 600,
             }}
@@ -240,7 +241,7 @@ function FunnelRow({ stage, leadsNuevos, index, baseDelay }: FunnelRowProps) {
             {delta.label}
           </span>
           {delta.extra && (
-            <span style={{ fontSize: 11, color: 'var(--yc-text-faint)' }}>{delta.extra}</span>
+            <span style={{ fontSize: 12, color: 'var(--yc-text-faint)' }}>{delta.extra}</span>
           )}
         </div>
       )}
@@ -300,7 +301,14 @@ export function Funnel({
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {stages.map((s, i) => (
-          <FunnelRow key={s.id} stage={s} leadsNuevos={leadsNuevos || 1} index={i} baseDelay={delay + 200} />
+          <FunnelRow
+            key={s.id}
+            stage={s}
+            leadsNuevos={leadsNuevos || 1}
+            primerMensaje={stages.find((st) => st.id === 'primer_mensaje')?.count ?? leadsNuevos}
+            index={i}
+            baseDelay={delay + 200}
+          />
         ))}
       </div>
 

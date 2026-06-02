@@ -294,7 +294,7 @@ function VentasTab({ sales, dateRange }: VentasTabProps) {
         <KpiCard
           icon={Icons.Target}
           accent="var(--yc-blue)"
-          question="Ticket promedio"
+          question="Precio promedio por venta"
           valueRaw={metrics.averageTicket}
           valueDisplay={(n) => fmt.ars(n)}
           delay={160}
@@ -394,7 +394,7 @@ function VentasTab({ sales, dateRange }: VentasTabProps) {
                 <YAxis
                   type="category"
                   dataKey="productName"
-                  tick={{ fontSize: 10, fill: 'var(--yc-text-mute)' }}
+                  tick={{ fontSize: 12, fill: 'var(--yc-text-mute)' }}
                   axisLine={false}
                   tickLine={false}
                   width={110}
@@ -476,7 +476,7 @@ function VentasTab({ sales, dateRange }: VentasTabProps) {
                   </div>
                   <div style={{ textAlign: 'right' }}>
                     <div className="yc-num" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--yc-text)' }}>{fmt.ars(cat.revenue)}</div>
-                    <div style={{ fontSize: 11.5, color: 'var(--yc-text-faint)' }}>{fmt.num(cat.count)} ventas · {cat.percentage}%</div>
+                    <div style={{ fontSize: 12, color: 'var(--yc-text-mute)' }}>{fmt.num(cat.count)} ventas · {cat.percentage}%</div>
                   </div>
                 </div>
               ))}
@@ -494,7 +494,7 @@ function VentasTab({ sales, dateRange }: VentasTabProps) {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--yc-border)' }}>
-                  {['#', 'Producto', 'Cant.', 'Ingresos', '% Total'].map((h, ci) => (
+                  {['#', 'Producto', 'Unidades', 'Ingresos', '% del ingreso'].map((h, ci) => (
                     <th
                       key={h}
                       style={{
@@ -543,7 +543,7 @@ function VentasTab({ sales, dateRange }: VentasTabProps) {
                         <div style={{ width: 52, height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 999, overflow: 'hidden' }}>
                           <div style={{ width: `${p.percentage}%`, height: '100%', background: 'var(--yc-gold)', borderRadius: 999 }} />
                         </div>
-                        <span style={{ fontSize: 11.5, color: 'var(--yc-text-faint)', width: 36, textAlign: 'right' }}>{p.percentage}%</span>
+                        <span style={{ fontSize: 11.5, color: 'var(--yc-text-mute)', width: 36, textAlign: 'right' }}>{p.percentage}%</span>
                       </div>
                     </td>
                   </tr>
@@ -594,13 +594,13 @@ function VentasTab({ sales, dateRange }: VentasTabProps) {
                         <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--yc-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {s.productName}
                         </div>
-                        <div style={{ fontSize: 11.5, color: 'var(--yc-text-faint)' }}>{dateStr}</div>
+                        <div style={{ fontSize: 12, color: 'var(--yc-text-mute)' }}>{dateStr}</div>
                       </div>
                     </div>
                     <div style={{ textAlign: 'right', flexShrink: 0 }}>
                       <div className="yc-num" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--yc-text)' }}>{fmt.ars(s.amount)}</div>
                       {s.paymentStatus && (
-                        <div style={{ fontSize: 11, color: s.paymentStatus === 'Pagado' ? 'var(--yc-green)' : 'var(--yc-text-faint)' }}>
+                        <div style={{ fontSize: 12, color: s.paymentStatus === 'Pagado' ? 'var(--yc-green)' : /Rechaz|Fallid|Cancel/i.test(s.paymentStatus) ? 'var(--yc-red)' : 'var(--yc-text-mute)' }}>
                           {s.paymentStatus}
                         </div>
                       )}
@@ -654,7 +654,7 @@ function RecuperacionTab({ attempts }: RecuperacionTabProps) {
         <KpiCard
           icon={Icons.Funnel}
           accent="var(--yc-blue)"
-          question="Total intentos de compra"
+          question="Total pagos procesados"
           valueRaw={totalAttempts}
           valueDisplay={(n) => fmt.num(n)}
           sub="En el período"
@@ -663,24 +663,19 @@ function RecuperacionTab({ attempts }: RecuperacionTabProps) {
         <KpiCard
           icon={Icons.X}
           accent="var(--yc-red)"
-          question="Intentos fallidos/abandonados"
+          question="Pagos no completados"
           valueRaw={failedAttempts}
           valueDisplay={(n) => fmt.num(n)}
-          sub="Fallidos + Abandonados"
+          sub="Fallidos y abandonados"
           delay={80}
         />
         <KpiCard
           icon={Icons.Refresh}
           accent="var(--yc-gold)"
-          question="Tasa de recuperación"
+          question="Pagos recuperados"
           valueRaw={recoveryMetrics.recoveryRate}
           valueDisplay={(n) => `${Math.round(n)}%`}
           sub={`${recoveryMetrics.recovered} de ${recoveryMetrics.totalRecoverable}`}
-          change={recoveryMetrics.recoveryRate > 0 ? {
-            up: recoveryMetrics.recoveryRate >= 50,
-            value: `${recoveryMetrics.recoveryRate}%`,
-            note: 'recuperados',
-          } : undefined}
           delay={160}
         />
         <KpiCard
@@ -697,7 +692,7 @@ function RecuperacionTab({ attempts }: RecuperacionTabProps) {
       {/* Charts row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16 }}>
         {/* Pie: distribution by status */}
-        <SectionCard title="Distribución por estado" subtitle="Proporción de intentos" delay={60}>
+        <SectionCard title="Estado de los pagos" subtitle="Proporción por resultado" delay={60}>
           {attemptsByStatus.length > 0 ? (
             <ResponsiveContainer width="100%" height={280} minHeight={200} minWidth={0} debounce={200}>
               <PieChart>
@@ -777,7 +772,7 @@ function RecuperacionTab({ attempts }: RecuperacionTabProps) {
       {/* Second charts row: value by status + recovery by vendor */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16 }}>
         {/* Bar: value by status */}
-        <SectionCard title="Valor por estado" subtitle="Monto total de intentos" delay={140}>
+        <SectionCard title="Monto por resultado de pago" subtitle="Total por tipo de resultado" delay={140}>
           {attemptsByStatus.length > 0 ? (
             <ResponsiveContainer width="100%" height={260} minHeight={200} minWidth={0} debounce={200}>
               <BarChart
@@ -846,7 +841,7 @@ function RecuperacionTab({ attempts }: RecuperacionTabProps) {
       </div>
 
       {/* Status breakdown table */}
-      <SectionCard title="Análisis de intentos por estado" delay={200}>
+      <SectionCard title="Resumen de pagos por resultado" delay={200}>
         {attemptsByStatus.length > 0 ? (
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -902,7 +897,7 @@ function RecuperacionTab({ attempts }: RecuperacionTabProps) {
       {/* Recoverable attempts table */}
       {recoverableAttempts.length > 0 && (
         <SectionCard
-          title="Intentos en seguimiento"
+          title="Pagos a recuperar"
           subtitle="Fallidos y abandonados — requieren gestión"
           accentBorder
           delay={240}
@@ -930,9 +925,7 @@ function RecuperacionTab({ attempts }: RecuperacionTabProps) {
               </thead>
               <tbody>
                 {recoverableAttempts.map((attempt, i) => {
-                  const daysInFollowUp = attempt.recoverySellerId
-                    ? Math.ceil(Math.abs(Date.now() - new Date(attempt.date).getTime()) / 86400000)
-                    : 0;
+                  const daysInFollowUp = Math.ceil(Math.abs(Date.now() - new Date(attempt.date).getTime()) / 86400000);
                   const isOld = daysInFollowUp > 7;
                   return (
                     <tr
@@ -959,8 +952,8 @@ function RecuperacionTab({ attempts }: RecuperacionTabProps) {
                           {attempt.status}
                         </span>
                       </td>
-                      <td style={{ padding: '9px 10px', color: attempt.recoverySellerId ? 'var(--yc-text)' : 'var(--yc-text-faint)', fontSize: 12.5 }}>
-                        {attempt.recoverySellerId ? `ID: ${attempt.recoverySellerId.slice(0, 8)}` : 'Sin asignar'}
+                      <td style={{ padding: '9px 10px', color: attempt.recoverySellerId ? 'var(--yc-text-mute)' : 'var(--yc-text-faint)', fontSize: 12.5 }}>
+                        {attempt.recoverySellerId ? '—' : 'Sin asignar'}
                       </td>
                       <td style={{ padding: '9px 10px', textAlign: 'right' }}>
                         <span className="yc-num" style={{ fontWeight: 600, color: isOld ? 'var(--yc-red)' : 'var(--yc-text-mute)', fontSize: 13 }}>
@@ -993,7 +986,7 @@ export default function VentasView({ sales, attempts, dateRange, rangeLabel }: V
             Ventas & Recuperación
           </h2>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--yc-text-mute)' }}>
-            {rangeLabel} · {sales.length} ventas · {attempts.length} intentos de compra
+            {rangeLabel} · {sales.length} ventas · {attempts.length} pagos procesados
           </p>
         </div>
 
@@ -1013,7 +1006,7 @@ export default function VentasView({ sales, attempts, dateRange, rangeLabel }: V
             className={`yc-pill${tab === 'recuperacion' ? ' is-active' : ''}`}
           >
             <Icons.Refresh size={14} />
-            Recuperación
+            Cobros pendientes
           </button>
         </div>
       </div>

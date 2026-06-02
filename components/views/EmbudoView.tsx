@@ -312,16 +312,16 @@ export default function EmbudoView({ funnelRespondio, rangeLabel }: EmbudoViewPr
             borderBottom: '1px solid var(--yc-border)',
           }}
         >
-          <div style={{ flex: '0 0 220px', fontSize: 11, fontWeight: 600, color: 'var(--yc-text-faint)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+          <div style={{ flex: '0 0 220px', fontSize: 12, fontWeight: 600, color: 'var(--yc-text-faint)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
             Etapa
           </div>
-          <div style={{ flex: '0 0 80px', textAlign: 'right', fontSize: 11, fontWeight: 600, color: 'var(--yc-text-faint)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+          <div style={{ flex: '0 0 80px', textAlign: 'right', fontSize: 12, fontWeight: 600, color: 'var(--yc-text-faint)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
             Personas
           </div>
-          <div style={{ flex: '0 0 72px', textAlign: 'right', fontSize: 11, fontWeight: 600, color: 'var(--yc-text-faint)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+          <div style={{ flex: '0 0 72px', textAlign: 'right', fontSize: 12, fontWeight: 600, color: 'var(--yc-text-faint)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
             % total
           </div>
-          <div style={{ flex: 1, textAlign: 'right', fontSize: 11, fontWeight: 600, color: 'var(--yc-text-faint)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
+          <div style={{ flex: 1, textAlign: 'right', fontSize: 12, fontWeight: 600, color: 'var(--yc-text-faint)', textTransform: 'uppercase', letterSpacing: '0.07em' }}>
             Se perdieron
           </div>
         </div>
@@ -351,7 +351,7 @@ export default function EmbudoView({ funnelRespondio, rangeLabel }: EmbudoViewPr
         >
           <span
             style={{
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: 600,
               color: 'var(--yc-text-faint)',
               textTransform: 'uppercase',

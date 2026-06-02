@@ -138,7 +138,7 @@ function deriveTeam(responsividad: ResponsividadVendedoraRow[]): TeamMember[] {
     return {
       name: shortName(r.vendedora_nombre),
       chats: r.chats_respondidos,
-      time: Math.round(r.resp_mediana_min ?? 0),
+      time: r.resp_mediana_min == null ? null : Math.round(r.resp_mediana_min),
       color: isBest ? 'var(--yc-green)' : 'var(--yc-gold)',
       tone: isBest ? '#1e3a2a' : '#3a2f1c',
     };
@@ -193,7 +193,7 @@ export function ResumenView({
     },
     ...respuesta.porVendedora.map((r) => ({
       label: shortName(r.vendedora_nombre),
-      value: `${formatDuration(r.resp_mediana_min ?? 0)} · ${r.chats_respondidos} respuestas`,
+      value: `${r.resp_mediana_min == null ? 'sin dato' : formatDuration(r.resp_mediana_min)} · ${r.chats_respondidos} respuestas`,
     })),
   ];
 
@@ -233,8 +233,8 @@ export function ResumenView({
           icon={Icons.Clock}
           accent="var(--yc-blue)"
           question="¿El equipo responde bien?"
-          valueRaw={respuesta.medianaMin}
-          valueDisplay={(v) => formatDuration(v)}
+          valueRaw={respuesta.medianaMin ?? 0}
+          valueDisplay={(v) => (respuesta.medianaMin == null ? 'sin dato' : formatDuration(v))}
           sub="tardan en contestar al lead"
           mini={respMini}
         />

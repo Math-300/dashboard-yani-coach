@@ -6,7 +6,7 @@ import { useCountUp, fmt } from './primitives';
 export interface TeamMember {
   name: string;
   chats: number;
-  time: number;
+  time: number | null; // mediana de minutos; null = no hay chats con tiempo registrado
   color: string;
   tone: string;
 }
@@ -24,7 +24,8 @@ interface TeamRowProps {
 }
 
 function TeamRow({ person, delay }: TeamRowProps) {
-  const time = useCountUp(person.time, { duration: 1000, delay: delay + 100 }) as number;
+  const hasTime = person.time !== null;
+  const time = useCountUp(person.time ?? 0, { duration: 1000, delay: delay + 100 }) as number;
   const chats = useCountUp(person.chats, { duration: 1000, delay: delay + 200 }) as number;
   const initial = person.name ? person.name[0].toUpperCase() : '?';
 
@@ -43,21 +44,21 @@ function TeamRow({ person, delay }: TeamRowProps) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span style={{ fontSize: 13.5, fontWeight: 600 }}>{person.name}</span>
-          <span className="yc-num" style={{ fontSize: 14, fontWeight: 600, color: person.color }}>
-            {fmt.dur(time)}
+          <span className="yc-num" style={{ fontSize: 14, fontWeight: 600, color: hasTime ? person.color : 'var(--yc-text-mute)' }}>
+            {hasTime ? fmt.dur(time) : 'sin dato'}
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
           <span className="yc-num" style={{ fontSize: 11.5, color: 'var(--yc-text-faint)' }}>
-            {fmt.num(chats)} respuestas
+            respondió {fmt.num(chats)} chats
           </span>
-          <span style={{ fontSize: 11, color: 'var(--yc-text-faint)' }}>en responder</span>
+          <span style={{ fontSize: 11, color: 'var(--yc-text-faint)' }}>{hasTime ? 'en promedio' : 'sin tiempo registrado'}</span>
         </div>
         {/* mini bar showing relative response time vs 30min reference */}
         <div style={{ marginTop: 6, height: 3, background: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden' }}>
           <div
             style={{
-              width: `${Math.min(100, (person.time / 30) * 100)}%`,
+              width: hasTime ? `${Math.min(100, ((person.time ?? 0) / 30) * 100)}%` : '0%',
               height: '100%',
               background: person.color,
               opacity: 0.7,

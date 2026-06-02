@@ -9,6 +9,7 @@
  */
 export function formatDuration(min: number): string {
   if (!Number.isFinite(min) || min < 0) return '0 min';
+  if (min > 0 && min < 1) return '< 1 min';
   const total = Math.round(min);
   if (total < 60) return `${total} min`;
   const h = Math.floor(total / 60);
