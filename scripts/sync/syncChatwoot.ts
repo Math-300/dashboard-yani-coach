@@ -4,6 +4,10 @@ import { supabaseAdmin } from './supabaseAdmin.js';
 import { chunk } from './helpers.js';
 
 const BATCH_SIZE = 500;
+// Concurrencia al traer mensajes por conversación. Chatwoot expone ~2230 convs y
+// el fetch es 1 request/conv: secuencial tardaba ~22min (revienta el watchdog).
+// Con un pool paralelo baja a ~3min. getJson() ya maneja 429 con backoff.
+const FETCH_CONCURRENCY = 8;
 
 interface ConvRecord {
   tenant_id: string;
@@ -31,29 +35,38 @@ export async function syncChatwoot(tenantId: string, runId: string) {
   const convs = await listConversations();
   console.log(`  ${convs.length} conversaciones listadas`);
 
-  const records: ConvRecord[] = [];
-  let i = 0;
-  for (const c of convs) {
-    i++;
-    const messages = await listMessages(c.id);
-    const r = deriveRespondio(messages);
-    records.push({
-      tenant_id: tenantId,
-      chatwoot_conversation_id: c.id,
-      chatwoot_contact_id: c.contact_id !== null ? String(c.contact_id) : null,
-      contacto_nocodb_id: c.contact_nocodb_id,
-      agent_chatwoot_id: c.agent_id,
-      status: c.status,
-      respondio: r.respondio,
-      primer_outbound_at: isoFromEpoch(r.primer_outbound_at),
-      primer_inbound_at: isoFromEpoch(r.primer_inbound_at),
-      tiempo_primera_respuesta_seg: r.tiempo_primera_respuesta_seg,
-      last_activity_at: isoFromEpoch(c.last_activity_at),
-      raw: { phone: c.contact_phone, email: c.contact_email },
-      synced_at: new Date().toISOString(),
-    });
-    if (i % 100 === 0) console.log(`  procesadas ${i}/${convs.length}`);
+  // Pool de workers paralelos: cada uno toma conversaciones por índice estriado
+  // (k, k+N, k+2N…). El fetch de mensajes (1 request/conv) domina el tiempo;
+  // paralelizar baja ~22min → ~3min y entra holgado en el watchdog.
+  const records: ConvRecord[] = new Array(convs.length);
+  let processed = 0;
+  async function worker(start: number) {
+    for (let idx = start; idx < convs.length; idx += FETCH_CONCURRENCY) {
+      const c = convs[idx];
+      const messages = await listMessages(c.id);
+      const r = deriveRespondio(messages);
+      records[idx] = {
+        tenant_id: tenantId,
+        chatwoot_conversation_id: c.id,
+        chatwoot_contact_id: c.contact_id !== null ? String(c.contact_id) : null,
+        contacto_nocodb_id: c.contact_nocodb_id,
+        agent_chatwoot_id: c.agent_id,
+        status: c.status,
+        respondio: r.respondio,
+        primer_outbound_at: isoFromEpoch(r.primer_outbound_at),
+        primer_inbound_at: isoFromEpoch(r.primer_inbound_at),
+        tiempo_primera_respuesta_seg: r.tiempo_primera_respuesta_seg,
+        last_activity_at: isoFromEpoch(c.last_activity_at),
+        raw: { phone: c.contact_phone, email: c.contact_email },
+        synced_at: new Date().toISOString(),
+      };
+      processed++;
+      if (processed % 200 === 0) console.log(`  procesadas ${processed}/${convs.length}`);
+    }
   }
+  await Promise.all(
+    Array.from({ length: Math.min(FETCH_CONCURRENCY, convs.length) }, (_, k) => worker(k)),
+  );
 
   let upserted = 0;
   for (const batch of chunk(records, BATCH_SIZE)) {
