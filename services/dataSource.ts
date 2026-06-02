@@ -26,7 +26,7 @@ import {
   PurchaseAttemptStatus,
   KpiCounts,
 } from '../types';
-import type { DateRange, FunnelCounts, FunnelRespondioRow, ResponsividadVendedoraRow, PlantillaStatRow } from './types';
+import type { DateRange, FunnelCounts, FunnelRespondioRow, ResponsividadVendedoraRow, PlantillaStatRow, ResponsividadGeneralRow } from './types';
 import { supabase, TENANT_ID } from './supabaseClient';
 
 // ============================================================================
@@ -419,6 +419,21 @@ export async function getPlantillasStats(
   }));
 }
 
+/** Responsividad GENERAL estable (últimos 90 días, NO atada al filtro del dashboard). */
+export async function getResponsividadGeneral(): Promise<ResponsividadGeneralRow[]> {
+  const { data, error } = await supabase.rpc('get_responsividad_general', {
+    p_tenant_id: TENANT_ID,
+    p_days: 90,
+  });
+  if (error) throw error;
+  return ((data as any[]) ?? []).map((d) => ({
+    vendedora_id: d.vendedora_id === null ? null : String(d.vendedora_id),
+    vendedora_nombre: d.vendedora_nombre ?? null,
+    chats_con_tiempo: Number(d.chats_con_tiempo ?? 0),
+    resp_mediana_min: d.resp_mediana_min === null ? null : Number(d.resp_mediana_min),
+  }));
+}
+
 /** Responsividad (mediana de respuesta) por vendedora. */
 export async function getResponsividad(
   dateRange?: DateRange | null,
@@ -436,6 +451,7 @@ export async function getResponsividad(
     vendedora_id: String(d.vendedora_id),
     vendedora_nombre: d.vendedora_nombre ?? null,
     chats_respondidos: Number(d.chats_respondidos ?? 0),
+    chats_sin_respuesta: Number(d.chats_sin_respuesta ?? 0),
     resp_mediana_min: d.resp_mediana_min === null ? null : Number(d.resp_mediana_min),
   }));
 }

@@ -7,6 +7,7 @@ export interface TeamMember {
   name: string;
   chats: number;
   time: number | null; // mediana de minutos; null = no hay chats con tiempo registrado
+  sinRespuesta: number;
   color: string;
   tone: string;
 }
@@ -14,6 +15,7 @@ export interface TeamMember {
 export interface EquipoCardProps {
   team: TeamMember[];
   sinAtender: number;
+  sinRespuestaTotal: number;
   delay?: number;
 }
 
@@ -26,7 +28,6 @@ interface TeamRowProps {
 function TeamRow({ person, delay }: TeamRowProps) {
   const hasTime = person.time !== null;
   const time = useCountUp(person.time ?? 0, { duration: 1000, delay: delay + 100 }) as number;
-  const chats = useCountUp(person.chats, { duration: 1000, delay: delay + 200 }) as number;
   const initial = person.name ? person.name[0].toUpperCase() : '?';
 
   return (
@@ -49,10 +50,14 @@ function TeamRow({ person, delay }: TeamRowProps) {
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
-          <span className="yc-num" style={{ fontSize: 11.5, color: 'var(--yc-text-faint)' }}>
-            respondió {fmt.num(chats)} chats
-          </span>
-          <span style={{ fontSize: 11, color: 'var(--yc-text-faint)' }}>{hasTime ? 'en promedio' : 'sin tiempo registrado'}</span>
+          {person.sinRespuesta > 0 ? (
+            <span className="yc-num" style={{ fontSize: 11.5, color: 'var(--yc-red)' }}>
+              {person.sinRespuesta} sin responder
+            </span>
+          ) : (
+            <span style={{ fontSize: 11.5, color: 'var(--yc-text-mute)' }}>al día</span>
+          )}
+          <span style={{ fontSize: 11, color: 'var(--yc-text-faint)' }}>tiempo típico 90d</span>
         </div>
         {/* mini bar showing relative response time vs 30min reference */}
         <div style={{ marginTop: 6, height: 3, background: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden' }}>
@@ -73,7 +78,7 @@ function TeamRow({ person, delay }: TeamRowProps) {
   );
 }
 
-export function EquipoCard({ team, sinAtender, delay = 0 }: EquipoCardProps) {
+export function EquipoCard({ team, sinAtender, sinRespuestaTotal, delay = 0 }: EquipoCardProps) {
   return (
     <section
       className="yc-glass yc-fade-up"
@@ -89,23 +94,43 @@ export function EquipoCard({ team, sinAtender, delay = 0 }: EquipoCardProps) {
         ))}
       </div>
       <div className="yc-divider" />
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 2px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-          <span
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: 999,
-              background: 'var(--yc-red)',
-              boxShadow: '0 0 10px rgba(232,122,122,0.5)',
-              display: 'inline-block',
-            }}
-          />
-          <span style={{ fontSize: 12.5, color: 'var(--yc-text-mute)' }}>Seguimientos vencidos</span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 2px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: 999,
+                background: 'var(--yc-red)',
+                boxShadow: '0 0 10px rgba(232,122,122,0.5)',
+                display: 'inline-block',
+              }}
+            />
+            <span style={{ fontSize: 12.5, color: 'var(--yc-text-mute)' }}>Sin respuesta humana (período)</span>
+          </div>
+          <span className="yc-num" style={{ fontSize: 18, fontWeight: 600, color: 'var(--yc-red)' }}>
+            {fmt.num(sinRespuestaTotal)}
+          </span>
         </div>
-        <span className="yc-num" style={{ fontSize: 18, fontWeight: 600, color: 'var(--yc-red)' }}>
-          {fmt.num(sinAtender)}
-        </span>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '2px 2px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+            <span
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: 999,
+                background: 'var(--yc-red)',
+                boxShadow: '0 0 10px rgba(232,122,122,0.5)',
+                display: 'inline-block',
+              }}
+            />
+            <span style={{ fontSize: 12.5, color: 'var(--yc-text-mute)' }}>Seguimientos vencidos</span>
+          </div>
+          <span className="yc-num" style={{ fontSize: 18, fontWeight: 600, color: 'var(--yc-red)' }}>
+            {fmt.num(sinAtender)}
+          </span>
+        </div>
       </div>
     </section>
   );

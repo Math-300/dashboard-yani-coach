@@ -16,7 +16,7 @@ import {
   miniSeries,
 } from '../../services/resumenMappers';
 import type { Sale, Seller, KpiCounts, Contact } from '../../types';
-import type { FunnelRespondioRow, ResponsividadVendedoraRow } from '../../services/types';
+import type { FunnelRespondioRow, ResponsividadVendedoraRow, ResponsividadGeneralRow } from '../../services/types';
 
 // ── ActionableHint ────────────────────────────────────────
 // Ported from diseno-aprobado/dashboard.jsx lines 471-529.
@@ -127,18 +127,29 @@ function shortName(nombre: string | null): string {
   return `${parts[0]} ${parts[parts.length - 1]}`;
 }
 
-function deriveTeam(responsividad: ResponsividadVendedoraRow[]): TeamMember[] {
-  if (responsividad.length === 0) return [];
+function deriveTeam(
+  responsividadGeneral: ResponsividadGeneralRow[],
+  responsividad: ResponsividadVendedoraRow[],
+): TeamMember[] {
+  // Use general rows (vendedora_id !== null) for stable time data
+  const generalRows = responsividadGeneral.filter((r) => r.vendedora_id !== null);
+  if (generalRows.length === 0 && responsividad.length === 0) return [];
 
-  // Find the lowest median time → gets green; others get gold
-  const bestTime = Math.min(...responsividad.map((r) => r.resp_mediana_min ?? Infinity));
+  // Build a map of filteredResponsividad by vendedora_id for sinRespuesta lookup
+  const filteredMap = new Map<string, ResponsividadVendedoraRow>();
+  responsividad.forEach((r) => filteredMap.set(r.vendedora_id, r));
 
-  return responsividad.map((r) => {
+  // Determine best time among general rows for color coding
+  const bestTime = Math.min(...generalRows.map((r) => r.resp_mediana_min ?? Infinity));
+
+  return generalRows.map((r) => {
     const isBest = (r.resp_mediana_min ?? Infinity) === bestTime;
+    const filtered = r.vendedora_id ? filteredMap.get(r.vendedora_id) : undefined;
     return {
       name: shortName(r.vendedora_nombre),
-      chats: r.chats_respondidos,
+      chats: r.chats_con_tiempo,
       time: r.resp_mediana_min == null ? null : Math.round(r.resp_mediana_min),
+      sinRespuesta: filtered?.chats_sin_respuesta ?? 0,
       color: isBest ? 'var(--yc-green)' : 'var(--yc-gold)',
       tone: isBest ? '#1e3a2a' : '#3a2f1c',
     };
@@ -151,6 +162,7 @@ export interface ResumenViewProps {
   sales: Sale[];
   funnelRespondio: FunnelRespondioRow;
   responsividad: ResponsividadVendedoraRow[];
+  responsividadGeneral: ResponsividadGeneralRow[];
   kpiCounts: KpiCounts;
   sellers: Seller[];
   contacts: Contact[];
@@ -161,6 +173,7 @@ export function ResumenView({
   sales,
   funnelRespondio,
   responsividad,
+  responsividadGeneral,
   kpiCounts,
   contacts,
   rangeLabel,
@@ -170,7 +183,7 @@ export function ResumenView({
   const respuesta = respuestaCard(funnelRespondio, responsividad, kpiCounts.urgentFollowUps);
   const leads = leadsCard(funnelRespondio);
   const stages = buildEmbudo(funnelRespondio);
-  const team = deriveTeam(responsividad);
+  const team = deriveTeam(responsividadGeneral, responsividad);
 
   // ── Sparklines (datos reales: forma de la tendencia en el período) ──
   // Ventas por tramo (suma de montos) y leads por tramo (conteo de altas).
@@ -185,16 +198,20 @@ export function ResumenView({
   ];
 
   // ── KPI: Respuesta — mini rows ────────────────────────
+  // Uses general (stable, 90-day) per-vendedora data so the tooltip does NOT
+  // shift when the date filter changes.
   const respMini: { label: string; value: string; accent?: string }[] = [
     {
       label: 'Seguimientos vencidos',
       value: fmt.num(respuesta.sinAtender),
       accent: 'var(--yc-red)',
     },
-    ...respuesta.porVendedora.map((r) => ({
-      label: shortName(r.vendedora_nombre),
-      value: `${r.resp_mediana_min == null ? 'sin dato' : formatDuration(r.resp_mediana_min)} · ${r.chats_respondidos} respuestas`,
-    })),
+    ...responsividadGeneral
+      .filter((r) => r.vendedora_id !== null)
+      .map((r) => ({
+        label: shortName(r.vendedora_nombre),
+        value: r.resp_mediana_min == null ? 'sin dato' : formatDuration(r.resp_mediana_min),
+      })),
   ];
 
   // ── KPI: Leads — mini rows ────────────────────────────
@@ -228,16 +245,21 @@ export function ResumenView({
           spark={ventasSpark.length > 0 ? ventasSpark : undefined}
           mini={ventasMini}
         />
-        <KpiCard
-          delay={220}
-          icon={Icons.Clock}
-          accent="var(--yc-blue)"
-          question="¿El equipo responde bien?"
-          valueRaw={respuesta.medianaMin ?? 0}
-          valueDisplay={(v) => (respuesta.medianaMin == null ? 'sin dato' : formatDuration(v))}
-          sub="tardan en contestar al lead"
-          mini={respMini}
-        />
+        {(() => {
+          const generalTotal = responsividadGeneral.find((r) => r.vendedora_id === null)?.resp_mediana_min ?? null;
+          return (
+            <KpiCard
+              delay={220}
+              icon={Icons.Clock}
+              accent="var(--yc-blue)"
+              question="¿El equipo responde bien?"
+              valueRaw={generalTotal ?? 0}
+              valueDisplay={(v) => (generalTotal == null ? 'sin dato' : formatDuration(v))}
+              sub="tiempo típico · últimos 90 días"
+              mini={respMini}
+            />
+          );
+        })()}
         <KpiCard
           delay={320}
           icon={Icons.Target}
@@ -261,11 +283,17 @@ export function ResumenView({
           rangeLabel={rangeLabel}
           delay={500}
         />
-        <EquipoCard
-          team={team}
-          sinAtender={kpiCounts.urgentFollowUps}
-          delay={600}
-        />
+        {(() => {
+          const sinRespuestaTotal = responsividad.reduce((acc, r) => acc + r.chats_sin_respuesta, 0);
+          return (
+            <EquipoCard
+              team={team}
+              sinAtender={kpiCounts.urgentFollowUps}
+              sinRespuestaTotal={sinRespuestaTotal}
+              delay={600}
+            />
+          );
+        })()}
       </div>
     </div>
   );

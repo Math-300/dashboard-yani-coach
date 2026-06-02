@@ -26,6 +26,14 @@ export interface ResponsividadVendedoraRow {
   vendedora_id: string;
   vendedora_nombre: string | null;
   chats_respondidos: number;
+  chats_sin_respuesta: number;
+  resp_mediana_min: number | null;
+}
+
+export interface ResponsividadGeneralRow {
+  vendedora_id: string | null;   // null = total del equipo
+  vendedora_nombre: string | null;
+  chats_con_tiempo: number;
   resp_mediana_min: number | null;
 }
 

@@ -76,6 +76,7 @@ function DashboardShell() {
     kpiCounts,
     funnelRespondio,
     responsividad,
+    responsividadGeneral,
     plantillas,
     isLoading,
     error,
@@ -172,6 +173,7 @@ function DashboardShell() {
                   sales={sales}
                   funnelRespondio={funnelRespondio}
                   responsividad={responsividad}
+                  responsividadGeneral={responsividadGeneral}
                   kpiCounts={kpiCounts}
                   sellers={sellers}
                   contacts={contacts}

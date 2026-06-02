@@ -16,7 +16,7 @@ import {
     getCacheState,
     CachedData
 } from '../services/cacheService';
-import { DateRange, FunnelCounts, FunnelRespondioRow, ResponsividadVendedoraRow, PlantillaStatRow } from '../services/types';
+import { DateRange, FunnelCounts, FunnelRespondioRow, ResponsividadVendedoraRow, PlantillaStatRow, ResponsividadGeneralRow } from '../services/types';
 
 interface UseDashboardDataResult {
     contacts: Contact[];
@@ -30,6 +30,7 @@ interface UseDashboardDataResult {
     kpiCounts: KpiCounts;
     funnelRespondio: FunnelRespondioRow;
     responsividad: ResponsividadVendedoraRow[];
+    responsividadGeneral: ResponsividadGeneralRow[];
     plantillas: PlantillaStatRow[];
 
     isLoading: boolean;
@@ -69,6 +70,7 @@ export function useDashboardData(
         venta_cerrada: 0, venta_perdida: 0, tiempo_resp_mediana_min: null,
     });
     const [responsividad, setResponsividad] = useState<ResponsividadVendedoraRow[]>([]);
+    const [responsividadGeneral, setResponsividadGeneral] = useState<ResponsividadGeneralRow[]>([]);
     const [plantillas, setPlantillas] = useState<PlantillaStatRow[]>([]);
     const [error, setError] = useState<Error | null>(null);
     const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -94,6 +96,7 @@ export function useDashboardData(
         });
         setFunnelRespondio(cachedData.funnelRespondio);
         setResponsividad(cachedData.responsividad);
+        setResponsividadGeneral(cachedData.responsividadGeneral ?? []);
         setPlantillas(cachedData.plantillas ?? []);
 
         const filtered = filterByDateRange(cachedData, startDate, endDate);
@@ -180,6 +183,7 @@ export function useDashboardData(
         kpiCounts,
         funnelRespondio,
         responsividad,
+        responsividadGeneral,
         plantillas,
         isLoading,
         error,

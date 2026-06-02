@@ -21,9 +21,10 @@ import {
     getSummaryMetrics,
     getFunnelRespondio,
     getResponsividad,
+    getResponsividadGeneral,
     getPlantillasStats,
 } from './dataSource';
-import type { DateRange, FunnelCounts, FunnelRespondioRow, ResponsividadVendedoraRow, PlantillaStatRow } from './types';
+import type { DateRange, FunnelCounts, FunnelRespondioRow, ResponsividadVendedoraRow, PlantillaStatRow, ResponsividadGeneralRow } from './types';
 import { NOCODB_CONFIG } from '../config';
 
 // Tipos para el caché
@@ -38,6 +39,7 @@ export interface CachedData {
     attempts: PurchaseAttempt[];
     funnelRespondio: FunnelRespondioRow;
     responsividad: ResponsividadVendedoraRow[];
+    responsividadGeneral: ResponsividadGeneralRow[];
     plantillas: PlantillaStatRow[];
     timestamp: number;
     dateRange?: DateRange | null;
@@ -156,9 +158,11 @@ async function fetchAllData(dateRange?: DateRange | null, existingData?: CachedD
     const attempts = await getRealAttempts(dateRange);
 
     // ⚡ Paso 7: Embudo respondió + responsividad + plantillas, todos fechados por el rango
-    const [funnelRespondio, responsividad, plantillas] = await Promise.all([
+    // responsividadGeneral es NO filtrada (últimos 90 días fijos) pero se carga junto al resto.
+    const [funnelRespondio, responsividad, responsividadGeneral, plantillas] = await Promise.all([
         getFunnelRespondio(dateRange),
         getResponsividad(dateRange),
+        getResponsividadGeneral(),
         getPlantillasStats(dateRange),
     ]);
 
@@ -186,6 +190,7 @@ async function fetchAllData(dateRange?: DateRange | null, existingData?: CachedD
         attempts,
         funnelRespondio,
         responsividad,
+        responsividadGeneral,
         plantillas,
         timestamp: Date.now(),
         dateRange: dateRange || null,
