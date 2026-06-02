@@ -1,13 +1,21 @@
 # CLAUDE.md - Contexto del Proyecto Dashboard Yani Coach
 
+## Regla #1: Leer `.brain/` antes de trabajar
+
+**Al iniciar cualquier sesión en este proyecto**, leer primero `.brain/INDEX.md`. Ahí está el contexto cross-proyecto (arquitectura Kapso→n8n→Chatwoot→NocoDB, esquema NocoDB, mapeo de vendedoras, diferencia con `chatwoot-dashboard-app`). Este archivo (`CLAUDE.md`) solo cubre el stack técnico del Dashboard en sí.
+
 ## Descripción General
 Dashboard de ventas y métricas para Yani Coach. Conecta con NocoDB como backend y muestra KPIs de ventas, pipeline, desempeño de vendedoras y más.
 
+Forma parte del ecosistema más amplio **Yani Coach** (proyecto padre en `../`). Este Dashboard **solo lee** de NocoDB — toda la mutación vive en el workflow n8n del proyecto padre. Ver `.brain/contexto_upstream.md` para el diagrama completo.
+
 ## Stack Tecnológico
 - **Frontend**: React 19 + TypeScript + Vite
+- **Router**: react-router-dom 7
 - **Estilos**: Tailwind CSS v4 + tema personalizado gold
-- **Gráficos**: @antv/g2 (importación dinámica)
-- **Backend**: NocoDB (API REST)
+- **Gráficos**: Recharts 3
+- **Iconos**: lucide-react
+- **Backend**: NocoDB (API REST, vía proxy serverless)
 - **Deployment**: Vercel (serverless functions)
 
 ## Estructura del Proyecto
@@ -24,15 +32,20 @@ Dashboard de ventas y métricas para Yani Coach. Conecta con NocoDB como backend
 | RecoveryView | Calidad y recuperación | ~21KB |
 
 ### Servicios (services/)
-- `noco.ts` - Conexión a NocoDB, normalización de datos
-- `metricsCalculator.ts` - Cálculo de KPIs y métricas
-- `dataService.ts` - Servicio de datos con fallback a demo
+- `noco.ts` — Conexión a NocoDB, normalización de datos, micro-fetching, paginación
+- `cacheService.ts` — Caché en memoria del cliente + pub/sub para invalidación (propaga errores sin enmascararlos)
+- `metricsCalculator.ts` — Cálculo de KPIs y métricas
+- `authService.ts` — Cliente de `/api/auth/*`
+- `chatService.ts` — Cliente de `/api/chat`
 
 ### Hooks (hooks/)
-- `useG2Chart.ts` - Hook para gráficos G2 con cleanup automático
+- `useDashboardData.ts` — Carga datos vía `cacheService`, filtra por rango de fechas, expone `funnelCounts` e `interactionCounts` pre-calculados
 
-### API (api/)
-- `nocodb/[...table].ts` - Proxy serverless para NocoDB
+### API serverless (api/)
+- `nocodb/[...table].ts` — Proxy a NocoDB con throttle + caché
+- `auth/login.ts`, `auth/logout.ts`, `auth/session.ts` — Autenticación por contraseña maestra
+- `chat.ts` — Asistente IA (OpenAI)
+- `metrics/summary.ts` — Resumen agregado server-side
 
 ## Convenciones de Código
 
@@ -42,10 +55,9 @@ Dashboard de ventas y métricas para Yani Coach. Conecta con NocoDB como backend
 - JSDoc para funciones públicas
 - Console.log de debug envueltos en `if (NOCODB_CONFIG.IS_DEV)`
 
-### Gráficos G2
-- Usar el hook `useG2Chart` para todos los gráficos
-- Importación dinámica de @antv/g2
-- Cleanup automático al desmontar
+### Gráficos
+- Todos los gráficos con Recharts (componentes declarativos: `<LineChart>`, `<BarChart>`, `<PieChart>`, etc.)
+- NO usar `@antv/g2` — se migró a Recharts. Si aparece una referencia en docs viejas, ignorarla
 
 ### Colores
 - Tema gold personalizado: gold-400 (primary), gold-500 (accent)
@@ -77,7 +89,6 @@ Variables sin prefijo VITE_ para el serverless.
 4. **Zona horaria**: America/Bogota (UTC-5)
 5. **Auth local**: si `VITE_LOCAL_AUTH_KEY` está definido en localhost, el login valida en el frontend sin usar `/api/auth/*`.
 
-## Próximos Pasos (Roadmap)
-- [ ] Migrar todos los gráficos a useG2Chart
-- [ ] Implementar tooltips de métricas (ver PLAN_TOOLTIPS_METRICAS.md)
-- [ ] Mejoras de performance en metricsCalculator.ts
+## Roadmap activo
+
+Ver `plans/PLAN_ARQUITECTURA_DATA_2026-04-18.md` — roadmap de 5 fases desde arreglar bugs actuales hasta capa de caché Supabase + integración Chatwoot/Kapso.

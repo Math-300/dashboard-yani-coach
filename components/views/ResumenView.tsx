@@ -12,6 +12,7 @@ import {
   respuestaCard,
   leadsCard,
   buildEmbudo,
+  miniSeries,
 } from '../../services/resumenMappers';
 import type { Sale, Seller, KpiCounts, Contact } from '../../types';
 import type { FunnelRespondioRow, ResponsividadVendedoraRow } from '../../services/types';
@@ -60,14 +61,14 @@ function ActionableHint({ urgentFollowUps, delay = 0 }: ActionableHintProps) {
         <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--yc-text)', marginBottom: 2 }}>
           Tenés{' '}
           <span style={{ color: 'var(--yc-red)' }}>
-            {urgentFollowUps} {urgentFollowUps === 1 ? 'lead sin atender' : 'leads sin atender'}
+            {fmt.num(urgentFollowUps)} {urgentFollowUps === 1 ? 'seguimiento vencido' : 'seguimientos vencidos'}
           </span>{' '}
-          hace más de 1h
+          para retomar
         </div>
         <div style={{ fontSize: 12.5, color: 'var(--yc-text-mute)' }}>
           {urgentFollowUps === 1
-            ? 'Puede que haya mostrado interés — mejor no lo dejes enfriar.'
-            : 'Algunas pueden haber mostrado interés — mejor no las dejes enfriar.'}
+            ? 'Un lead que tocaba volver a contactar y ya pasó la fecha — mejor no lo dejes enfriar.'
+            : 'Leads que tocaba volver a contactar y ya pasó la fecha — mejor no los dejes enfriar.'}
         </div>
       </div>
       <button
@@ -155,6 +156,7 @@ export function ResumenView({
   funnelRespondio,
   responsividad,
   kpiCounts,
+  contacts,
   rangeLabel,
 }: ResumenViewProps) {
   // ── mapper outputs ────────────────────────────────────
@@ -163,6 +165,12 @@ export function ResumenView({
   const leads = leadsCard(funnelRespondio);
   const stages = buildEmbudo(funnelRespondio);
   const team = deriveTeam(responsividad);
+
+  // ── Sparklines (datos reales: forma de la tendencia en el período) ──
+  // Ventas por tramo (suma de montos) y leads por tramo (conteo de altas).
+  // Respuesta NO tiene serie diaria honesta → sin sparkline.
+  const ventasSpark = miniSeries(sales, (s) => s.date, (s) => s.amount || 0);
+  const leadsSpark = miniSeries(contacts, (c) => c.createdAt, () => 1);
 
   // ── KPI: Ventas — mini rows ───────────────────────────
   const ventasMini = [
@@ -173,8 +181,8 @@ export function ResumenView({
   // ── KPI: Respuesta — mini rows ────────────────────────
   const respMini: { label: string; value: string; accent?: string }[] = [
     {
-      label: 'Sin atender ahora',
-      value: `${respuesta.sinAtender} ${respuesta.sinAtender === 1 ? 'chat' : 'chats'}`,
+      label: 'Seguimientos vencidos',
+      value: fmt.num(respuesta.sinAtender),
       accent: 'var(--yc-red)',
     },
     ...respuesta.porVendedora.map((r) => ({
@@ -209,6 +217,7 @@ export function ResumenView({
           valueRaw={ventas.total}
           valueDisplay={fmt.ars}
           sub={ventas.count === 0 ? 'sin ventas en el período' : undefined}
+          spark={ventasSpark.length > 0 ? ventasSpark : undefined}
           mini={ventasMini}
         />
         <KpiCard
@@ -229,6 +238,7 @@ export function ResumenView({
           valueRaw={leads.respondieron}
           valueDisplay={fmt.num}
           sub={`${leads.respondieron} respondieron de ${leads.leadsNuevos} nuevos`}
+          spark={leadsSpark.length > 0 ? leadsSpark : undefined}
           mini={leadsMini}
         />
       </div>

@@ -27,3 +27,19 @@ dist-ssr
 .env.production
 
 .vercel
+
+# Artefactos temporales de debug/investigación
+tmp_*.json
+*_output.txt
+*_output.json
+*-output.txt
+*-output.json
+metrics-validation-output.*
+test_noco_tz_out.*
+console-debug.log
+
+# MCP tooling artifacts
+.playwright-mcp/
+
+# Operational brain notes — local only, may contain secrets
+.brain/

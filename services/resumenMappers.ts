@@ -26,6 +26,36 @@ export function leadsCard(funnel: FunnelRespondioRow): {
   return { respondieron: funnel.respondieron, leadsNuevos: funnel.leads_nuevos, tasaRespuesta: tasa, llegaronVenta: funnel.venta_cerrada };
 }
 
+/**
+ * Serie para sparkline: reparte `items` en `buckets` tramos iguales por fecha
+ * (de la fecha más vieja a la más nueva presente en los datos) y suma `getValue`
+ * en cada tramo. Devuelve [] si no hay al menos 2 puntos con fecha válida.
+ * Datos REALES (no inventa tendencia); es un indicador de forma, no exacto.
+ */
+export function miniSeries<T>(
+  items: T[],
+  getDate: (x: T) => string | null | undefined,
+  getValue: (x: T) => number,
+  buckets = 7,
+): number[] {
+  const pts = items
+    .map((x) => ({ t: new Date(getDate(x) ?? '').getTime(), v: getValue(x) }))
+    .filter((p) => !Number.isNaN(p.t));
+  if (pts.length < 2) return [];
+  const min = Math.min(...pts.map((p) => p.t));
+  const max = Math.max(...pts.map((p) => p.t));
+  if (max === min) return [];
+  const span = max - min;
+  const out = new Array(buckets).fill(0);
+  for (const p of pts) {
+    let idx = Math.floor(((p.t - min) / span) * buckets);
+    if (idx >= buckets) idx = buckets - 1;
+    if (idx < 0) idx = 0;
+    out[idx] += p.v;
+  }
+  return out;
+}
+
 export function buildEmbudo(funnel: FunnelRespondioRow): EmbudoStage[] {
   const L = funnel.leads_nuevos || 0;
   const pct = (n: number) => (L ? Math.round((n / L) * 100) : 0);

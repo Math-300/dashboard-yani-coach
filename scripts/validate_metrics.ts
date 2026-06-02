@@ -1,8 +1,11 @@
 import fetch from 'node-fetch';
-import { TABLE_IDS } from './config';
+import { TABLE_IDS } from '../config';
 
 const NOCODB_URL = 'https://app.nocodb.com';
-const NOCODB_TOKEN = 'KmEce4G0VLt9WJdkt4p0LEL6qm0jWUb3sHcI3tNW';
+const NOCODB_TOKEN = process.env.NOCODB_TOKEN ?? process.env.VITE_NOCODB_TOKEN;
+if (!NOCODB_TOKEN) {
+    throw new Error('Falta NOCODB_TOKEN (o VITE_NOCODB_TOKEN) en el entorno. Exporta la variable antes de correr el script.');
+}
 
 interface DateRange {
     start: Date;

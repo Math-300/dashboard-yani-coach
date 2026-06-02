@@ -1,0 +1,336 @@
+/* Yani Coach Dashboard — premium dark, dorado accents
+   Centralized keyframes + base resets + utility classes.
+   Component-specific styles live in JSX as inline styles, but anything
+   that needs a keyframe / pseudo-element / scrollbar mod is here. */
+
+:root {
+  --yc-bg-0: #08080c;
+  --yc-bg-1: #0e0e12;
+  --yc-bg-2: #14141c;
+  --yc-bg-3: #1a1a24;
+  --yc-glass: rgba(255, 255, 255, 0.035);
+  --yc-glass-hi: rgba(255, 255, 255, 0.06);
+  --yc-border: rgba(255, 255, 255, 0.07);
+  --yc-border-hi: rgba(255, 255, 255, 0.13);
+  --yc-text: #f0eada;
+  --yc-text-mute: rgba(240, 234, 218, 0.58);
+  --yc-text-faint: rgba(240, 234, 218, 0.32);
+  --yc-gold: #e7c15a;
+  --yc-gold-2: #f0d488;
+  --yc-gold-dim: rgba(231, 193, 90, 0.18);
+  --yc-gold-faint: rgba(231, 193, 90, 0.08);
+  --yc-green: #4ec98a;
+  --yc-red: #e87a7a;
+  --yc-blue: #6fb3e8;
+  --yc-radius: 16px;
+  --yc-radius-sm: 10px;
+  --yc-shadow: 0 8px 30px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.25);
+  --yc-shadow-hi: 0 16px 50px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.3);
+  --font-sans: "Geist", "Inter", system-ui, -apple-system, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, "SF Mono", monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--yc-text);
+  background:
+    radial-gradient(ellipse 1200px 800px at 20% -10%, rgba(231, 193, 90, 0.06), transparent 60%),
+    radial-gradient(ellipse 900px 700px at 110% 110%, rgba(111, 179, 232, 0.04), transparent 60%),
+    linear-gradient(180deg, var(--yc-bg-1) 0%, var(--yc-bg-2) 100%);
+  background-attachment: fixed;
+  font-feature-settings: "ss01", "cv11", "tnum";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar — thin and ghosted, premium */
+.yc-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+.yc-scroll::-webkit-scrollbar-track { background: transparent; }
+.yc-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+}
+.yc-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.12); }
+
+/* ── KEYFRAMES ──────────────────────────────────────────── */
+
+@keyframes yc-fade-up {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes yc-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes yc-pulse-dot {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(78, 201, 138, 0.55); }
+  50%      { box-shadow: 0 0 0 8px rgba(78, 201, 138, 0); }
+}
+@keyframes yc-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+@keyframes yc-bar-grow {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+@keyframes yc-spark-draw {
+  from { stroke-dashoffset: var(--spark-len, 200); }
+  to   { stroke-dashoffset: 0; }
+}
+@keyframes yc-gold-sweep {
+  0%   { background-position: -100% 0; opacity: 0; }
+  40%  { opacity: 0.7; }
+  100% { background-position: 200% 0; opacity: 0; }
+}
+
+/* ── UTILS ──────────────────────────────────────────────── */
+
+.yc-fade-up {
+  opacity: 0;
+  animation: yc-fade-up 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+}
+
+.yc-pulse {
+  animation: yc-pulse-dot 2s ease-out infinite;
+}
+
+.yc-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.03) 0%,
+    rgba(255, 255, 255, 0.09) 50%,
+    rgba(255, 255, 255, 0.03) 100%
+  );
+  background-size: 200% 100%;
+  animation: yc-shimmer 1.4s linear infinite;
+}
+
+/* Glass card base — used by every elevated surface */
+.yc-glass {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.045) 0%,
+    rgba(255, 255, 255, 0.018) 100%
+  );
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid var(--yc-border);
+  border-radius: var(--yc-radius);
+  box-shadow: var(--yc-shadow);
+  position: relative;
+  overflow: hidden;
+}
+/* Top highlight line — the "premium" detail */
+.yc-glass::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 12%;
+  right: 12%;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.14),
+    transparent
+  );
+  pointer-events: none;
+}
+
+.yc-glass-hover {
+  transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1),
+              box-shadow 0.25s ease,
+              border-color 0.25s ease;
+}
+.yc-glass-hover:hover {
+  transform: translateY(-2px);
+  border-color: var(--yc-border-hi);
+  box-shadow: var(--yc-shadow-hi);
+}
+
+/* Number ticker (Geist + tabular) */
+.yc-num {
+  font-family: var(--font-sans);
+  font-feature-settings: "tnum" 1, "ss01" 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* Gold gradient text for big highlight word */
+.yc-gold-text {
+  background: linear-gradient(135deg, var(--yc-gold-2) 0%, var(--yc-gold) 60%, #b8923f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* Pill button (date filter) */
+.yc-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--yc-border);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--yc-text-mute);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  font-family: var(--font-sans);
+}
+.yc-pill:hover {
+  border-color: var(--yc-border-hi);
+  color: var(--yc-text);
+}
+.yc-pill.is-active {
+  background: linear-gradient(180deg, var(--yc-gold-dim), rgba(231, 193, 90, 0.05));
+  border-color: rgba(231, 193, 90, 0.4);
+  color: var(--yc-gold-2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Sidebar item hover/active */
+.yc-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  color: var(--yc-text-mute);
+  cursor: pointer;
+  position: relative;
+  transition: background 0.15s ease, color 0.15s ease;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.yc-nav-item:hover { background: rgba(255, 255, 255, 0.04); color: var(--yc-text); }
+.yc-nav-item.is-active {
+  background: linear-gradient(
+    90deg,
+    rgba(231, 193, 90, 0.14) 0%,
+    rgba(231, 193, 90, 0.04) 100%
+  );
+  color: var(--yc-text);
+}
+.yc-nav-item.is-active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--yc-gold-2), var(--yc-gold));
+  box-shadow: 0 0 12px rgba(231, 193, 90, 0.5);
+}
+.yc-nav-item.is-soon {
+  cursor: default;
+  opacity: 0.5;
+}
+.yc-nav-item.is-soon:hover { background: transparent; color: var(--yc-text-mute); }
+
+/* Tooltip for collapsed sidebar */
+.yc-tip {
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%) translateX(-4px);
+  background: var(--yc-bg-3);
+  border: 1px solid var(--yc-border-hi);
+  color: var(--yc-text);
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 100;
+  box-shadow: var(--yc-shadow);
+}
+.yc-nav-item:hover .yc-tip {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+/* Skeleton block (used during first-load shimmer) */
+.yc-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  background-size: 200% 100%;
+  animation: yc-shimmer 1.4s linear infinite;
+  border-radius: 8px;
+}
+
+/* Mini "soon" badge */
+.yc-soon-badge {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px dashed var(--yc-border-hi);
+  color: var(--yc-text-faint);
+  background: transparent;
+}
+
+/* Divider line — thin gold-tinted */
+.yc-divider {
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
+  margin: 0;
+}
+
+/* Stage label for funnel */
+.yc-stage-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--yc-text-mute);
+}
+
+/* Avatar */
+.yc-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--yc-text);
+  flex-shrink: 0;
+  border: 1px solid var(--yc-border-hi);
+}
+
+/* responsive collapse: under 1100px force sidebar collapsed */
+@media (max-width: 1100px) {
+  .yc-sidebar-auto { width: 64px !important; }
+  .yc-sidebar-auto .yc-sidebar-text { display: none !important; }
+}

@@ -5,9 +5,11 @@ Dashboard de ventas y métricas para Yani Coach. Conecta con NocoDB como backend
 ## Stack Tecnológico
 
 - **Frontend**: React 19 + TypeScript + Vite
+- **Router**: react-router-dom 7
 - **Estilos**: Tailwind CSS v4 + tema personalizado gold
-- **Gráficos**: @antv/g2 (importación dinámica)
-- **Backend**: NocoDB (API REST)
+- **Gráficos**: Recharts 3
+- **Iconos**: lucide-react
+- **Backend**: NocoDB (API REST, vía proxy serverless)
 - **Deployment**: Vercel (serverless functions)
 
 ## Estructura del Proyecto
@@ -23,13 +25,21 @@ Dashboard de ventas y métricas para Yani Coach. Conecta con NocoDB como backend
 │   └── RecoveryView.tsx     # Calidad y recuperación
 ├── services/             # Servicios de datos y cálculo de métricas
 │   ├── noco.ts              # Conexión a NocoDB, normalización de datos
+│   ├── cacheService.ts      # Caché en memoria + pub/sub (propaga errores)
 │   ├── metricsCalculator.ts # Cálculo de KPIs y métricas
-│   └── dataService.ts       # Servicio de datos con fallback a demo
-├── hooks/                # Custom hooks
-│   └── useG2Chart.ts        # Hook para gráficos G2 con cleanup automático
+│   ├── authService.ts       # Cliente de /api/auth/*
+│   └── chatService.ts       # Cliente de /api/chat
+├── hooks/
+│   └── useDashboardData.ts  # Carga + filtrado por fecha del dashboard
+├── auth/                 # AuthContext y AuthGuard (react-router)
 ├── api/                  # API serverless para Vercel
-│   └── nocodb/[...table].ts # Proxy serverless para NocoDB
-└── docs/                 # Documentación técnica
+│   ├── nocodb/[...table].ts # Proxy con throttle + caché
+│   ├── auth/                # login / logout / session
+│   ├── chat.ts              # Asistente IA (OpenAI)
+│   └── metrics/summary.ts   # Resumen agregado server-side
+├── plans/                # Planes activos (PLAN_ARQUITECTURA_DATA_2026-04-18.md)
+├── .brain/               # Contexto persistente del proyecto
+└── docs/
     └── SOLUCION_COLORES_GOLD.md
 ```
 

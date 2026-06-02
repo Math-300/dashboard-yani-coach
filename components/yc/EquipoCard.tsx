@@ -100,10 +100,10 @@ export function EquipoCard({ team, sinAtender, delay = 0 }: EquipoCardProps) {
               display: 'inline-block',
             }}
           />
-          <span style={{ fontSize: 12.5, color: 'var(--yc-text-mute)' }}>Sin atender ahora</span>
+          <span style={{ fontSize: 12.5, color: 'var(--yc-text-mute)' }}>Seguimientos vencidos</span>
         </div>
         <span className="yc-num" style={{ fontSize: 18, fontWeight: 600, color: 'var(--yc-red)' }}>
-          {sinAtender} {sinAtender === 1 ? 'chat' : 'chats'}
+          {fmt.num(sinAtender)}
         </span>
       </div>
     </section>

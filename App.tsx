@@ -9,6 +9,9 @@ import LoginView from './components/LoginView';
 import { loadInitialRange, savePresetSelection, getPresetRange, type DateRangePreset } from './services/dateUtils';
 import { getCacheState } from './services/cacheService';
 import { ResumenView, presetToLabel } from './components/views/ResumenView';
+import VentasView from './components/views/VentasView';
+import EquipoView from './components/views/EquipoView';
+import EmbudoView from './components/views/EmbudoView';
 
 // ── Skeleton (first-paint shimmer) ────────────────────────
 // Ported from diseno-aprobado/dashboard.jsx lines 872-887
@@ -66,6 +69,8 @@ function DashboardShell() {
     contacts,
     sales,
     sellers,
+    interactions,
+    attempts,
     kpiCounts,
     funnelRespondio,
     responsividad,
@@ -170,19 +175,29 @@ function DashboardShell() {
                 />
               )}
               {section === 'ventas' && (
-                <div className="yc-glass" style={{ padding: 24 }}>
-                  Ventas — próximamente
-                </div>
+                <VentasView
+                  sales={sales}
+                  attempts={attempts}
+                  dateRange={dateRange}
+                  rangeLabel={presetToLabel(activePresetId)}
+                />
               )}
               {section === 'equipo' && (
-                <div className="yc-glass" style={{ padding: 24 }}>
-                  Equipo — próximamente
-                </div>
+                <EquipoView
+                  sellers={sellers}
+                  responsividad={responsividad}
+                  sales={sales}
+                  interactions={interactions}
+                  contacts={contacts}
+                  dateRange={dateRange}
+                  rangeLabel={presetToLabel(activePresetId)}
+                />
               )}
               {section === 'embudo' && (
-                <div className="yc-glass" style={{ padding: 24 }}>
-                  Embudo — próximamente
-                </div>
+                <EmbudoView
+                  funnelRespondio={funnelRespondio}
+                  rangeLabel={presetToLabel(activePresetId)}
+                />
               )}
             </div>
           </div>
