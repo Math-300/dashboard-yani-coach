@@ -395,15 +395,20 @@ export async function getFunnelRespondio(
 }
 
 /** Responsividad (mediana de respuesta) por vendedora. */
-export async function getResponsividad(): Promise<ResponsividadVendedoraRow[]> {
-  const { data, error } = await supabase
-    .from('v_responsividad_vendedora')
-    .select('vendedora_id, vendedora_nombre, chats_respondidos, resp_mediana_min')
-    .eq('tenant_id', TENANT_ID)
-    .order('chats_respondidos', { ascending: false });
+export async function getResponsividad(
+  dateRange?: DateRange | null,
+): Promise<ResponsividadVendedoraRow[]> {
+  // RPC fechado por cohorte de leads (coherente con get_funnel_respondio).
+  // Sin rango → global. Reemplaza la vista global v_responsividad_vendedora
+  // para que el bloque "El equipo responde bien" respete el filtro de fecha.
+  const { data, error } = await supabase.rpc('get_responsividad', {
+    p_tenant_id: TENANT_ID,
+    p_start: dateRange?.start.toISOString() ?? null,
+    p_end: dateRange?.end.toISOString() ?? null,
+  });
   if (error) throw error;
-  return (data ?? []).map((d) => ({
-    vendedora_id: d.vendedora_id,
+  return ((data as any[]) ?? []).map((d) => ({
+    vendedora_id: String(d.vendedora_id),
     vendedora_nombre: d.vendedora_nombre ?? null,
     chats_respondidos: Number(d.chats_respondidos ?? 0),
     resp_mediana_min: d.resp_mediana_min === null ? null : Number(d.resp_mediana_min),

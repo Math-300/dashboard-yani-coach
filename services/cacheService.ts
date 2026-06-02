@@ -153,10 +153,10 @@ async function fetchAllData(dateRange?: DateRange | null, existingData?: CachedD
     const interactions = await getRealInteractions(dateRange);
     const attempts = await getRealAttempts(dateRange);
 
-    // ⚡ Paso 7: Embudo respondió (depende del rango) + responsividad (global)
+    // ⚡ Paso 7: Embudo respondió + responsividad, ambos fechados por el rango
     const [funnelRespondio, responsividad] = await Promise.all([
         getFunnelRespondio(dateRange),
-        getResponsividad(),
+        getResponsividad(dateRange),
     ]);
 
     if (NOCODB_CONFIG.DEBUG) {
