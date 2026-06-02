@@ -88,3 +88,41 @@ export function deriveRespondio(
 
   return { respondio, primer_outbound_at, primer_inbound_at, tiempo_primera_respuesta_seg };
 }
+
+export interface TemplateSend {
+  chatwoot_message_id: number;
+  template_name: string;
+  enviado_at: number; // epoch sec
+  status: string | null;
+  entregado: boolean;
+  leido: boolean;
+  fallido: boolean;
+  respondido: boolean;
+}
+
+/**
+ * Extrae los envíos de template (is_template_replay) de una conversación.
+ * `respondido` = hubo un inbound visible posterior al envío.
+ * Función pura: es_masivo y contacto se agregan en el sync.
+ */
+export function deriveTemplateSends(messages: ChatwootMessage[]): TemplateSend[] {
+  const sorted = [...messages].sort((a, b) => a.created_at - b.created_at);
+  const inbounds = sorted.filter((m) => m.message_type === 0 && !m.private);
+  const out: TemplateSend[] = [];
+  for (const m of sorted) {
+    if (m.message_type !== 1 || m.private) continue;
+    if (m.is_template_replay !== true || !m.template_name || m.id == null) continue;
+    const status = m.status ?? null;
+    out.push({
+      chatwoot_message_id: m.id,
+      template_name: m.template_name,
+      enviado_at: m.created_at,
+      status,
+      entregado: status === 'delivered' || status === 'read',
+      leido: status === 'read',
+      fallido: status === 'failed',
+      respondido: inbounds.some((i) => i.created_at > m.created_at),
+    });
+  }
+  return out;
+}
