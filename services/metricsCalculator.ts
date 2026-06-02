@@ -56,11 +56,11 @@ export interface FunnelStep {
  * @returns Número total de contactos activos en el pipeline
  * 
  * @example
- * const counts = { 'Lead Nuevo': 2, 'Venta Ganada': 1 };
+ * const counts = { 'Nuevo': 2, 'Venta Cerrada': 1, 'Venta Perdida': 1 };
  * calculateTotalLeadsInPipeline(counts); // Returns: 2
  */
 export const calculateTotalLeadsInPipeline = (funnelCounts: Record<string, number>): number => {
-    const inactiveStatuses = ['Venta Ganada', 'Venta Perdida', 'Leads perdidos (que nunca contestaron)', 'no contactar'];
+    const inactiveStatuses: string[] = [LeadStatus.CLOSED_WON, LeadStatus.CLOSED_LOST];
 
     return Object.entries(funnelCounts)
         .filter(([status]) => !inactiveStatuses.includes(status))
@@ -177,9 +177,12 @@ export const calculateMonthlySales = (
 export const calculateConversionRate = (
     leadsCreated: number,
     salesCount: number
-): number => {
-    if (leadsCreated === 0) {
-        return salesCount > 0 ? 100 : 0;
+): number | null => {
+    // Sin leads en el período no hay base para calcular conversión: retornamos null
+    // (la UI debe mostrar "—"). Antes devolvía 100% cuando había ventas de leads viejos,
+    // lo que hacía creer al usuario que hubo conversión perfecta siendo falso.
+    if (leadsCreated <= 0) {
+        return null;
     }
 
     return Math.round((salesCount / leadsCreated) * 100);
@@ -288,9 +291,9 @@ export const calculateFunnelByStatus = (contacts: Contact[]): FunnelStep[] => {
  * @returns String formateado como moneda colombiana
  */
 export const formatCurrency = (value: number): string => {
-    return new Intl.NumberFormat('es-CO', {
+    return new Intl.NumberFormat('en-US', {
         style: 'currency',
-        currency: 'COP',
+        currency: 'USD',
         minimumFractionDigits: 0,
         maximumFractionDigits: 0
     }).format(value);
@@ -460,39 +463,43 @@ export const calculateAverageTicket = (sales: Sale[]): number => {
 };
 
 /**
- * Calcula la tendencia de ventas agrupada por semana o mes
+ * Calcula la tendencia de ventas agrupada por día, semana o mes
  * 
  * @param sales - Lista de ventas
- * @param groupBy - Agrupación: 'week' o 'month'
+ * @param groupBy - Agrupación: 'day' | 'week' | 'month'
  * @returns Array de períodos con fecha, ingresos y cantidad
  */
-export const calculateSalesTrend = (sales: Sale[], groupBy: 'week' | 'month' = 'week'): TrendData[] => {
+export const calculateSalesTrend = (sales: Sale[], groupBy: 'day' | 'week' | 'month' = 'week'): TrendData[] => {
     if (sales.length === 0) return [];
 
     // Función para obtener la clave del período
     const getPeriodKey = (date: Date): string => {
+        if (groupBy === 'day') {
+            return date.toISOString().split('T')[0];
+        }
         if (groupBy === 'month') {
             return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        } else {
-            // Calcular semana del año
-            const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
-            const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
-            const weekNumber = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
-            return `${date.getFullYear()}-W${String(weekNumber).padStart(2, '0')}`;
         }
+        // Calcular semana del año
+        const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
+        const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
+        const weekNumber = Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
+        return `${date.getFullYear()}-W${String(weekNumber).padStart(2, '0')}`;
     };
 
     // Función para obtener fecha de inicio del período
     const getPeriodStartDate = (date: Date): Date => {
+        if (groupBy === 'day') {
+            return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        }
         if (groupBy === 'month') {
             return new Date(date.getFullYear(), date.getMonth(), 1);
-        } else {
-            // Obtener el lunes de la semana
-            const d = new Date(date);
-            const day = d.getDay();
-            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-            return new Date(d.setDate(diff));
         }
+        // Obtener el lunes de la semana
+        const d = new Date(date);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+        return new Date(d.setDate(diff));
     };
 
     // Agrupar ventas por período
@@ -500,6 +507,7 @@ export const calculateSalesTrend = (sales: Sale[], groupBy: 'week' | 'month' = '
 
     sales.forEach(sale => {
         const saleDate = new Date(sale.date);
+        if (isNaN(saleDate.getTime())) return;
         const periodKey = getPeriodKey(saleDate);
         const startDate = getPeriodStartDate(saleDate);
 
@@ -535,16 +543,13 @@ export const calculateTotalRevenue = (
     sales: Sale[],
     dateRange?: { start: Date; end: Date }
 ): number => {
-    let filteredSales = sales;
-
+    // Nota: Las ventas ya llegan filtradas por rango desde el servidor/caché.
+    // Evitamos re-filtrar aquí para no perder ventas del día por timezone.
     if (dateRange) {
-        filteredSales = sales.filter(sale => {
-            const saleDate = new Date(sale.date);
-            return saleDate >= dateRange.start && saleDate <= dateRange.end;
-        });
+        return sales.reduce((sum, sale) => sum + (sale.amount || 0), 0);
     }
 
-    return filteredSales.reduce((sum, sale) => sum + (sale.amount || 0), 0);
+    return sales.reduce((sum, sale) => sum + (sale.amount || 0), 0);
 };
 
 // ============================================
@@ -1195,7 +1200,11 @@ export const calculatePurchaseAttemptsByStatus = (attempts: PurchaseAttempt[]): 
  * @param contacts - Lista de contactos (para verificar recuperaciones)
  * @returns Objeto con métricas de recuperación
  */
-export const calculateRecoveryMetrics = (attempts: PurchaseAttempt[], contacts: Contact[]): RecoveryMetrics => {
+export const calculateRecoveryMetrics = (
+    attempts: PurchaseAttempt[],
+    _contacts: Contact[],
+    sales: Sale[] = []
+): RecoveryMetrics => {
     // Intentos recuperables: Fallidos + Abandonados
     const recoverableAttempts = attempts.filter(a =>
         a.status === PurchaseAttemptStatus.FAILED ||
@@ -1205,12 +1214,29 @@ export const calculateRecoveryMetrics = (attempts: PurchaseAttempt[], contacts: 
     const totalRecoverable = recoverableAttempts.length;
     const potentialValue = recoverableAttempts.reduce((sum, a) => sum + (a.amount || 0), 0);
 
-    // Intentos recuperados: aquellos con recoverySellerId asignado
-    const recoveredAttempts = recoverableAttempts.filter(a => a.recoverySellerId);
+    // Pre-indexar ventas por contactId para evitar O(n×m) en el filtro de abajo.
+    const salesByContact = new Map<string, Sale[]>();
+    for (const s of sales) {
+        if (!s.contactId) continue;
+        const list = salesByContact.get(s.contactId);
+        if (list) list.push(s);
+        else salesByContact.set(s.contactId, [s]);
+    }
+
+    // Un intento cuenta como "recuperado" solo si hay una Sale del MISMO contacto
+    // fechada igual o después del intento. Antes se asumía recuperado apenas había
+    // recoverySellerId, lo que inflaba la tasa con intentos asignados pero nunca cerrados.
+    const isRecovered = (a: PurchaseAttempt): boolean => {
+        const contactSales = salesByContact.get(a.contactId);
+        if (!contactSales || contactSales.length === 0) return false;
+        const attemptTime = new Date(a.date).getTime();
+        return contactSales.some(s => new Date(s.date).getTime() >= attemptTime);
+    };
+
+    const recoveredAttempts = recoverableAttempts.filter(isRecovered);
     const recovered = recoveredAttempts.length;
     const recoveredValue = recoveredAttempts.reduce((sum, a) => sum + (a.amount || 0), 0);
 
-    // Tasa de recuperación
     const recoveryRate = totalRecoverable > 0
         ? Math.round((recovered / totalRecoverable) * 100)
         : 0;

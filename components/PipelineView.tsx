@@ -71,7 +71,10 @@ const PipelineView: React.FC<PipelineViewProps> = ({
     const metrics = useMemo(() => {
         const leadsInPipeline = calculateTotalLeadsInPipeline(funnelCounts);
         const lostLeadsCount = calculateLostLeads(contacts);
-        const totalInteractions = interactionCounts['total'] || interactions.length;
+        // interactionCounts es { canal: N, ... } sin clave 'total' — sumar valores
+        const sumCounts = (rec: Record<string, number>): number =>
+            Object.values(rec).reduce((s: number, n: number) => s + n, 0);
+        const totalInteractions = sumCounts(interactionCounts) || interactions.length;
         const avgInteractions = calculateAvgInteractionsPerLead(leadsInPipeline, totalInteractions);
         // ⚡ Distribución de leads: desde conteos pre-calculados del servidor
         const leadsByStatus = buildLeadsByStatus(funnelCounts);
@@ -79,12 +82,11 @@ const PipelineView: React.FC<PipelineViewProps> = ({
         const leadsBySource = calculateLeadsBySource(contacts);
         const leadsByCountry = calculateLeadsByCountry(contacts);
         // ⚡ Interacciones por canal: desde conteos pre-calculados
+        const channelTotal = sumCounts(interactionCounts) || 1;
         const interactionsByChannel = Object.entries(interactionCounts)
-            .filter(([key]) => key !== 'total')
             .map(([channel, cnt]) => {
-                const t = Number(interactionCounts['total']) || 1;
                 const c = Number(cnt);
-                return { channel, count: c, percentage: Math.round((c / t) * 100) };
+                return { channel, count: c, percentage: Math.round((c / channelTotal) * 100) };
             })
             .sort((a, b) => a.count - b.count);
         const interactionResults = calculateInteractionResults(interactions);

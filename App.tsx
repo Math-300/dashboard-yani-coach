@@ -117,7 +117,7 @@ function DashboardShell() {
                   onClick={refresh}
                   disabled={isLoading}
                   className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
-                  title="Refrescar datos desde NocoDB"
+                  title="Refrescar datos"
                 >
                   <RefreshCw className={`w-4 h-4 text-gray-600 dark:text-gray-400 ${isLoading ? 'animate-spin' : ''}`} />
                 </button>
@@ -169,7 +169,7 @@ function DashboardShell() {
           {isInitialLoad ? (
             <div className="flex flex-col justify-center items-center h-64 space-y-4">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold-500"></div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Cargando datos desde NocoDB…</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Cargando datos…</p>
             </div>
           ) : error ? (
             <div className="flex flex-col justify-center items-center h-64 space-y-3">
