@@ -109,7 +109,7 @@ const SellerRowCard: React.FC<SellerRowCardProps> = function SellerRowCard({ row
 
   return (
     <div
-      className="yc-glass yc-glass-hover yc-fade-up"
+      className="yc-glass yc-glass-hover yc-fade-up yc-rank-row"
       style={{
         animationDelay: `${delay}ms`,
         padding: '16px 18px',
@@ -153,7 +153,7 @@ const SellerRowCard: React.FC<SellerRowCardProps> = function SellerRowCard({ row
       </div>
 
       {/* Name + interactions */}
-      <div style={{ width: 110, flexShrink: 0 }}>
+      <div className="yc-rank-name" style={{ width: 110, flexShrink: 0 }}>
         <div style={{ fontSize: 13.5, fontWeight: 600, color: isTop ? 'var(--yc-gold-2)' : 'var(--yc-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
           {row.shortName}
         </div>
@@ -163,7 +163,7 @@ const SellerRowCard: React.FC<SellerRowCardProps> = function SellerRowCard({ row
       </div>
 
       {/* Sales count + amount */}
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div className="yc-rank-mid" style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
           <span
             className="yc-num"
@@ -206,7 +206,7 @@ const SellerRowCard: React.FC<SellerRowCardProps> = function SellerRowCard({ row
       </div>
 
       {/* Responsividad block — fuente: promedio general 30 días */}
-      <div style={{ width: 116, flexShrink: 0 }}>
+      <div className="yc-rank-resp" style={{ width: 116, flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
           <span style={{ fontSize: 10, color: 'var(--yc-text-faint)', lineHeight: 1.2 }}>
             tiempo típico<br />

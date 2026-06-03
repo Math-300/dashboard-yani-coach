@@ -70,13 +70,8 @@ export function Topbar({
 
   return (
     <header
+      className="yc-topbar"
       style={{
-        height: 72,
-        flexShrink: 0,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 20,
-        padding: '0 32px',
         borderBottom: '1px solid var(--yc-border)',
         background: 'rgba(14,14,18,0.45)',
         backdropFilter: 'blur(14px)',
@@ -101,7 +96,7 @@ export function Topbar({
       </div>
 
       {/* Range pills + custom picker */}
-      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, position: 'relative' }}>
+      <div className="yc-topbar-pills" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, position: 'relative' }}>
         {PILL_IDS.map((id) => (
           <button
             key={id}
@@ -152,10 +147,10 @@ export function Topbar({
       </div>
 
       {/* Divider */}
-      <div style={{ height: 28, width: 1, background: 'var(--yc-border)', flexShrink: 0 }} />
+      <div className="yc-topbar-divider" style={{ height: 28, width: 1, background: 'var(--yc-border)', flexShrink: 0 }} />
 
       {/* Freshness indicator */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 9, color: 'var(--yc-text-mute)', fontSize: 12.5, flexShrink: 0 }}>
+      <div className="yc-topbar-fresh" style={{ display: 'flex', alignItems: 'center', gap: 9, color: 'var(--yc-text-mute)', fontSize: 12.5, flexShrink: 0 }}>
         <PulseDot />
         <span>
           {lastUpdatedLabel !== 'se actualiza solo' ? (

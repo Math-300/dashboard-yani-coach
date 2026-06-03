@@ -47,6 +47,7 @@ function BreakdownRow({ stage, leadsNuevos, index }: BreakdownRowProps) {
 
   return (
     <div
+      className="yc-funnel-row"
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -58,7 +59,7 @@ function BreakdownRow({ stage, leadsNuevos, index }: BreakdownRowProps) {
       }}
     >
       {/* Stage label */}
-      <div style={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div className="yc-funnel-label" style={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column', gap: 2 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {isStar && (
             <span style={{ color: 'var(--yc-gold-2)', fontSize: 12, lineHeight: 1 }}>★</span>

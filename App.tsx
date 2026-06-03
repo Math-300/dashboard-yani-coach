@@ -20,12 +20,12 @@ function SkeletonScreen() {
   return (
     <div style={{ flex: 1, padding: '24px 32px', display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div className="yc-skeleton" style={{ height: 64, borderRadius: 16 }} />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+      <div className="yc-kpi-grid">
         <div className="yc-skeleton" style={{ height: 200, borderRadius: 16 }} />
         <div className="yc-skeleton" style={{ height: 200, borderRadius: 16 }} />
         <div className="yc-skeleton" style={{ height: 200, borderRadius: 16 }} />
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, flex: 1, minHeight: 320 }}>
+      <div className="yc-split-grid" style={{ flex: 1, minHeight: 320 }}>
         <div className="yc-skeleton" style={{ borderRadius: 16 }} />
         <div className="yc-skeleton" style={{ borderRadius: 16 }} />
       </div>
@@ -163,8 +163,7 @@ function DashboardShell() {
         ) : (
           /* Main content scroll area */
           <div
-            className="yc-scroll"
-            style={{ flex: 1, overflow: 'auto', padding: '20px 32px 32px' }}
+            className="yc-scroll yc-app-main"
           >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 1500, margin: '0 auto' }}>
               {/* ── Section views ─────────────────────── */}

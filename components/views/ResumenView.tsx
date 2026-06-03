@@ -236,8 +236,8 @@ export function ResumenView({
       {/* 1. Actionable hint — hidden when 0 urgent follow-ups */}
       <ActionableHint urgentFollowUps={kpiCounts.urgentFollowUps} delay={0} />
 
-      {/* 2. KPI row — 3 cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+      {/* 2. KPI row — 3 cards (responsive: 3→2→1 columns) */}
+      <div className="yc-kpi-grid">
         <KpiCard
           delay={120}
           icon={Icons.Dollar}
@@ -279,8 +279,8 @@ export function ResumenView({
         />
       </div>
 
-      {/* 3. Funnel + Equipo */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: 16 }}>
+      {/* 3. Funnel + Equipo (responsive: side-by-side → stacked) */}
+      <div className="yc-split-grid">
         <Funnel
           stages={stages}
           leadsNuevos={funnelRespondio.leads_nuevos}

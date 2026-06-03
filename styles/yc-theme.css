@@ -326,3 +326,104 @@ body {
   .yc-sidebar-auto { width: 64px !important; }
   .yc-sidebar-auto .yc-sidebar-text { display: none !important; }
 }
+
+/* ── RESPONSIVE LAYOUT ──────────────────────────────────────
+   Breakpoint-driven reflow so the dashboard reads well on any
+   device. Inline grids/topbar opt in via these classes. */
+
+/* Safety net: never let a stray fixed-width child create a
+   horizontal scrollbar on the whole document. The content area
+   scrolls vertically; tables opt into their own overflow-x. */
+html, body { max-width: 100%; overflow-x: hidden; }
+
+/* KPI row: 3 columns → 2 (tablet) → 1 (phone) */
+.yc-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .yc-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 600px) {
+  .yc-kpi-grid { grid-template-columns: 1fr; }
+}
+
+/* Two-pane split (e.g. embudo + equipo): side-by-side → stacked */
+.yc-split-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .yc-split-grid { grid-template-columns: 1fr; }
+}
+
+/* Main content scroll padding shrinks on small screens */
+.yc-app-main {
+  flex: 1;
+  overflow: auto;
+  padding: 20px 32px 32px;
+}
+@media (max-width: 760px) {
+  .yc-app-main { padding: 16px 14px 24px; }
+}
+
+/* Topbar: single row on desktop, wraps/stacks on small screens */
+.yc-topbar {
+  height: 72px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 32px;
+}
+@media (max-width: 900px) {
+  .yc-topbar {
+    height: auto;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+}
+/* Pill strip: pushes full-width below the title and scrolls
+   horizontally instead of overflowing the page on phones */
+@media (max-width: 900px) {
+  .yc-topbar-pills {
+    margin-left: 0 !important;
+    width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+  }
+  .yc-topbar-pills::-webkit-scrollbar { height: 0; }
+  .yc-topbar-pills .yc-pill { flex-shrink: 0; }
+}
+/* Freshness indicator + its divider are non-essential on phones */
+@media (max-width: 760px) {
+  .yc-topbar-divider, .yc-topbar-fresh { display: none !important; }
+}
+/* Title scales down so it never crowds the pills */
+@media (max-width: 760px) {
+  .yc-topbar h1 { font-size: 21px !important; }
+}
+
+/* Equipo ranking row: side columns (110px + 116px) overflow a
+   phone-width card. Allow wrapping; on phones the sales block and
+   the response block each take a full line under the name. */
+.yc-rank-row { flex-wrap: wrap; }
+@media (max-width: 560px) {
+  .yc-rank-name { width: auto !important; flex: 1 1 auto; }
+  .yc-rank-mid  { flex: 1 1 100% !important; }
+  .yc-rank-resp { width: 100% !important; }
+}
+
+/* Embudo rows: a fixed 220px label + numeric columns overflow a
+   phone. On small screens the label takes a full line and the
+   numeric columns wrap neatly below it (no data dropped). */
+@media (max-width: 560px) {
+  .yc-funnel-row { flex-wrap: wrap; }
+  .yc-funnel-label { flex: 1 1 100% !important; }
+}
