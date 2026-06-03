@@ -15,8 +15,9 @@ import {
   Cell,
 } from 'recharts';
 import { Seller, Contact, Interaction, Sale, LeadStatus, InteractionType } from '../../types';
-import type { ResponsividadVendedoraRow } from '../../services/types';
+import type { ResponsividadVendedoraRow, ResponsividadGeneralRow } from '../../services/types';
 import { fmt, useCountUp } from '../yc/primitives';
+import { formatDuration } from '../../services/format';
 import { isDateInRange } from '../../services/dateUtils';
 
 // ── Props ──────────────────────────────────────────────────
@@ -24,6 +25,7 @@ import { isDateInRange } from '../../services/dateUtils';
 export interface EquipoViewProps {
   sellers: Seller[];
   responsividad: ResponsividadVendedoraRow[];
+  responsividadGeneral: ResponsividadGeneralRow[];
   sales: Sale[];
   interactions: Interaction[];
   contacts: Contact[];
@@ -47,9 +49,15 @@ interface SellerRow {
   activeLeads: number;
   interactionsCount: number;
   leadsAssigned: number;
-  // responsividad
+  // responsividad (filtrada por período — sólo para chatsRespondidos)
   chatsRespondidos: number;
   respMedianaMin: number | null;
+  // responsividad general (30 días estable)
+  respGeneralMedianaMin: number | null;
+  respGeneralBMenos15: number;
+  respGeneralB1560: number;
+  respGeneralB14h: number;
+  respGeneralBMas4h: number;
   // rank
   rank: number;
 }
@@ -197,40 +205,60 @@ const SellerRowCard: React.FC<SellerRowCardProps> = function SellerRowCard({ row
         </div>
       </div>
 
-      {/* Responsividad block */}
-      <div style={{ width: 100, flexShrink: 0 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-          <span style={{ fontSize: 11, color: 'var(--yc-text-faint)' }}>respuesta</span>
+      {/* Responsividad block — fuente: promedio general 30 días */}
+      <div style={{ width: 116, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+          <span style={{ fontSize: 10, color: 'var(--yc-text-faint)', lineHeight: 1.2 }}>
+            tiempo típico<br />
+            <span style={{ fontSize: 9, opacity: 0.7 }}>30d · 8–22h</span>
+          </span>
           <span
             className="yc-num"
-            style={{ fontSize: 13, fontWeight: 600, color: respColor(row.respMedianaMin) }}
+            style={{ fontSize: 13, fontWeight: 600, color: respColor(row.respGeneralMedianaMin) }}
           >
-            {row.respMedianaMin !== null ? fmt.min(row.respMedianaMin) : '—'}
+            {row.respGeneralMedianaMin !== null
+              ? formatDuration(row.respGeneralMedianaMin)
+              : 'sin dato'}
           </span>
         </div>
-        {/* mini bar: response time vs 30 min reference */}
-        <div
-          style={{
-            height: 3,
-            background: 'rgba(255,255,255,0.05)',
-            borderRadius: 2,
-            overflow: 'hidden',
-          }}
-        >
-          <div
-            style={{
-              width: `${respBarWidth(row.respMedianaMin)}%`,
-              height: '100%',
-              background: respColor(row.respMedianaMin),
-              opacity: 0.75,
-              transformOrigin: 'left',
-              animation: `yc-bar-grow 0.9s ${delay + 250}ms cubic-bezier(.2,.7,.2,1) forwards`,
-              transform: 'scaleX(0)',
-            }}
-          />
-        </div>
+        {/* Barra apilada de 4 tramos */}
+        {(() => {
+          const tot =
+            row.respGeneralBMenos15 +
+            row.respGeneralB1560 +
+            row.respGeneralB14h +
+            row.respGeneralBMas4h;
+          if (tot === 0) return (
+            <div style={{ height: 7, borderRadius: 4, background: 'rgba(255,255,255,0.05)' }} />
+          );
+          const seg = (n: number, c: string, label: string) =>
+            n > 0 ? (
+              <div
+                key={label}
+                title={`${label}: ${n}`}
+                style={{ width: `${(n / tot) * 100}%`, background: c, height: '100%' }}
+              />
+            ) : null;
+          return (
+            <div
+              style={{
+                height: 7,
+                borderRadius: 4,
+                overflow: 'hidden',
+                display: 'flex',
+                gap: 1,
+                background: 'rgba(255,255,255,0.05)',
+              }}
+            >
+              {seg(row.respGeneralBMenos15, 'var(--yc-green)', 'Menos de 15 min')}
+              {seg(row.respGeneralB1560, 'var(--yc-gold)', '15 min – 1 h')}
+              {seg(row.respGeneralB14h, '#f0a050', '1 – 4 h')}
+              {seg(row.respGeneralBMas4h, 'var(--yc-red)', 'Más de 4 horas')}
+            </div>
+          );
+        })()}
         <div style={{ fontSize: 10, color: 'var(--yc-text-faint)', marginTop: 3 }}>
-          {row.chatsRespondidos > 0 ? `${row.chatsRespondidos} respuestas` : 'sin datos'}
+          {row.chatsRespondidos > 0 ? `${row.chatsRespondidos} resp. (período)` : 'sin datos período'}
         </div>
       </div>
     </div>
@@ -282,8 +310,8 @@ function Insights({ rows }: InsightProps) {
   const top = sorted[0];
 
   const byResp = rows
-    .filter((r) => r.respMedianaMin !== null)
-    .sort((a, b) => (a.respMedianaMin ?? 9999) - (b.respMedianaMin ?? 9999));
+    .filter((r) => r.respGeneralMedianaMin !== null)
+    .sort((a, b) => (a.respGeneralMedianaMin ?? 9999) - (b.respGeneralMedianaMin ?? 9999));
   const fastest = byResp[0] ?? null;
 
   return (
@@ -349,7 +377,7 @@ function Insights({ rows }: InsightProps) {
                 className="yc-num"
                 style={{ fontSize: 12, color: 'var(--yc-text-mute)', marginTop: 1 }}
               >
-                {fmt.min(fastest.respMedianaMin!)} mediana · {fastest.chatsRespondidos} respuestas
+                {formatDuration(fastest.respGeneralMedianaMin!)} típico 30d
               </div>
             </div>
           </div>
@@ -393,6 +421,7 @@ function Insights({ rows }: InsightProps) {
 export default function EquipoView({
   sellers,
   responsividad,
+  responsividadGeneral,
   sales,
   interactions,
   contacts,
@@ -412,6 +441,15 @@ export default function EquipoView({
     const respByName = new Map<string, ResponsividadVendedoraRow>();
     responsividad.forEach((r) => {
       if (r.vendedora_nombre) respByName.set(r.vendedora_nombre.trim().toLowerCase(), r);
+    });
+
+    // Lookup de responsividad general (30d estable) por nombre exacto.
+    // Filtramos la fila total (vendedora_id === null) y usamos vendedora_nombre como clave.
+    const generalByName = new Map<string, ResponsividadGeneralRow>();
+    responsividadGeneral.forEach((r) => {
+      if (r.vendedora_id !== null && r.vendedora_nombre) {
+        generalByName.set(r.vendedora_nombre.trim().toLowerCase(), r);
+      }
     });
 
     const isInRange = (d: string) => isDateInRange(d, dateRange.start, dateRange.end);
@@ -489,11 +527,14 @@ export default function EquipoView({
         const sellerInteractions = interactions.filter((i) => i.sellerId === seller.id);
         const interactionsCount = sellerInteractions.length;
 
-        // ── Responsividad ──
+        // ── Responsividad (período filtrado) ──
         const resp =
           respMap.get(seller.id) ??
           respByName.get(seller.name.trim().toLowerCase()) ??
           null;
+
+        // ── Responsividad general 30d (match por nombre exacto, case-insensitive) ──
+        const genResp = generalByName.get(seller.name.trim().toLowerCase()) ?? null;
 
         return {
           id: seller.id,
@@ -511,6 +552,11 @@ export default function EquipoView({
           leadsAssigned,
           chatsRespondidos: resp?.chats_respondidos ?? 0,
           respMedianaMin: resp?.resp_mediana_min ?? null,
+          respGeneralMedianaMin: genResp?.resp_mediana_min ?? null,
+          respGeneralBMenos15: genResp?.b_menos_15 ?? 0,
+          respGeneralB1560: genResp?.b_15_60 ?? 0,
+          respGeneralB14h: genResp?.b_1_4h ?? 0,
+          respGeneralBMas4h: genResp?.b_mas_4h ?? 0,
           rank: 0, // filled below after sort
         };
       })
@@ -519,7 +565,7 @@ export default function EquipoView({
         return b.salesCount - a.salesCount;
       })
       .map((r, i) => ({ ...r, rank: i + 1 }));
-  }, [sellers, responsividad, sales, interactions, contacts, dateRange]);
+  }, [sellers, responsividad, responsividadGeneral, sales, interactions, contacts, dateRange]);
 
   // Chart data: sales amount per seller (horizontal bar)
   const chartData = useMemo(
@@ -607,6 +653,29 @@ export default function EquipoView({
                   delay={300 + i * 80}
                   isTop={row.rank === 1}
                 />
+              ))}
+            </div>
+            {/* Leyenda barra de tramos de respuesta */}
+            <div style={{ display: 'flex', gap: 14, marginTop: 10, flexWrap: 'wrap' }}>
+              {[
+                { label: '< 15 min', color: 'var(--yc-green)' },
+                { label: '15 min – 1 h', color: 'var(--yc-gold)' },
+                { label: '1 – 4 h', color: '#f0a050' },
+                { label: '+ 4 h', color: 'var(--yc-red)' },
+              ].map((item) => (
+                <div key={item.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <span
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: 2,
+                      background: item.color,
+                      display: 'inline-block',
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span style={{ fontSize: 11, color: 'var(--yc-text-faint)' }}>{item.label}</span>
+                </div>
               ))}
             </div>
           </section>

@@ -192,6 +192,7 @@ function DashboardShell() {
                 <EquipoView
                   sellers={sellers}
                   responsividad={responsividad}
+                  responsividadGeneral={responsividadGeneral}
                   sales={sales}
                   interactions={interactions}
                   contacts={contacts}

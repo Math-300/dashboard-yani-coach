@@ -261,7 +261,7 @@ export function ResumenView({
               question="¿El equipo responde bien?"
               valueRaw={generalTotal ?? 0}
               valueDisplay={(v) => (generalTotal == null ? 'sin dato' : formatDuration(v))}
-              sub="tiempo típico · últimos 30 días"
+              sub="tiempo típico · 30 días · horario 8–22h"
               mini={respMini}
             />
           );
