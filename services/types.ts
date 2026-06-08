@@ -17,6 +17,7 @@ export interface FunnelRespondioRow {
   primer_mensaje: number;
   respondieron: number;
   interesados: number;
+  agendo: number;
   venta_cerrada: number;
   venta_cerrada_monto: number;
   venta_perdida: number;

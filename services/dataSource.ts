@@ -387,6 +387,7 @@ export async function getFunnelRespondio(
     primer_mensaje: Number(row?.primer_mensaje ?? 0),
     respondieron: Number(row?.respondieron ?? 0),
     interesados: Number(row?.interesados ?? 0),
+    agendo: Number(row?.agendo ?? 0),
     venta_cerrada: Number(row?.venta_cerrada ?? 0),
     venta_cerrada_monto: Number(row?.venta_cerrada_monto ?? 0),
     venta_perdida: Number(row?.venta_perdida ?? 0),

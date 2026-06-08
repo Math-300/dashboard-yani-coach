@@ -3,9 +3,9 @@ const v = ventasCard([{ amount: 100 } as any, { amount: 200 } as any, { amount: 
 console.assert(v.total === 600 && v.count === 3 && v.ticketPromedio === 200, 'ventasCard');
 const l = leadsCard({ leads_nuevos: 310, respondieron: 124, venta_cerrada: 12 } as any);
 console.assert(l.tasaRespuesta === 40 && l.llegaronVenta === 12 && l.respondieron === 124, 'leadsCard');
-const e = buildEmbudo({ leads_nuevos: 310, primer_mensaje: 310, respondieron: 124, interesados: 58, venta_cerrada: 12, venta_perdida: 22, tiempo_resp_mediana_min: 18 } as any);
+const e = buildEmbudo({ leads_nuevos: 310, primer_mensaje: 310, respondieron: 124, interesados: 58, agendo: 30, venta_cerrada: 12, venta_perdida: 22, tiempo_resp_mediana_min: 18 } as any);
 console.assert(e[2].star === true && e[2].count === 124, 'embudo star');
-console.assert(e[4].soon === true && e[4].count === null, 'embudo soon');
+console.assert(e[4].id === 'agendo' && e[4].count === 30, 'embudo agendo');
 const r = respuestaCard({ tiempo_resp_mediana_min: 18.4 } as any, [], 3);
 console.assert(r.medianaMin === 18 && r.sinAtender === 3, 'respuestaCard');
 
