@@ -11,9 +11,10 @@ interface ResultCardProps {
   kind: 'win' | 'lose';
   target: number;
   delay: number;
+  amount?: number;
 }
 
-function ResultCard({ kind, target, delay }: ResultCardProps) {
+function ResultCard({ kind, target, delay, amount }: ResultCardProps) {
   const isWin = kind === 'win';
   const n = useCountUp(target, { duration: 1100, delay }) as number;
   const color = isWin ? 'var(--yc-green)' : 'var(--yc-red)';
@@ -55,6 +56,11 @@ function ResultCard({ kind, target, delay }: ResultCardProps) {
         >
           {fmt.num(n)}
         </div>
+        {isWin && amount != null && amount > 0 && (
+          <div style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--yc-green)', marginTop: 2 }}>
+            {fmt.ars(amount)} facturado
+          </div>
+        )}
       </div>
     </div>
   );
@@ -255,6 +261,7 @@ export interface FunnelProps {
   stages: EmbudoStage[];
   leadsNuevos: number;
   ventaCerrada: number;
+  ventaCerradaMonto?: number;
   ventaPerdida: number;
   rangeLabel: string;
   delay?: number;
@@ -264,6 +271,7 @@ export function Funnel({
   stages,
   leadsNuevos,
   ventaCerrada,
+  ventaCerradaMonto,
   ventaPerdida,
   rangeLabel,
   delay = 0,
@@ -327,7 +335,7 @@ export function Funnel({
           Resultado final
         </span>
         <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <ResultCard kind="win" target={ventaCerrada} delay={delay + 1100} />
+          <ResultCard kind="win" target={ventaCerrada} amount={ventaCerradaMonto} delay={delay + 1100} />
           <ResultCard kind="lose" target={ventaPerdida} delay={delay + 1250} />
         </div>
       </div>

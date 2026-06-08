@@ -388,6 +388,7 @@ export async function getFunnelRespondio(
     respondieron: Number(row?.respondieron ?? 0),
     interesados: Number(row?.interesados ?? 0),
     venta_cerrada: Number(row?.venta_cerrada ?? 0),
+    venta_cerrada_monto: Number(row?.venta_cerrada_monto ?? 0),
     venta_perdida: Number(row?.venta_perdida ?? 0),
     tiempo_resp_mediana_min:
       row?.tiempo_resp_mediana_min === null || row?.tiempo_resp_mediana_min === undefined

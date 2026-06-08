@@ -67,7 +67,7 @@ export function useDashboardData(
     });
     const [funnelRespondio, setFunnelRespondio] = useState<FunnelRespondioRow>({
         leads_nuevos: 0, primer_mensaje: 0, respondieron: 0, interesados: 0,
-        venta_cerrada: 0, venta_perdida: 0, tiempo_resp_mediana_min: null,
+        venta_cerrada: 0, venta_cerrada_monto: 0, venta_perdida: 0, tiempo_resp_mediana_min: null,
     });
     const [responsividad, setResponsividad] = useState<ResponsividadVendedoraRow[]>([]);
     const [responsividadGeneral, setResponsividadGeneral] = useState<ResponsividadGeneralRow[]>([]);

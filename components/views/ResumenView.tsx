@@ -223,7 +223,7 @@ export function ResumenView({
   // ── KPI: Leads — mini rows ────────────────────────────
   const leadsMini = [
     { label: 'Tasa de respuesta', value: `${leads.tasaRespuesta}%`, accent: 'var(--yc-blue)' },
-    { label: 'Llegaron a venta', value: String(leads.llegaronVenta), accent: 'var(--yc-green)' },
+    { label: 'Ventas cerradas', value: String(leads.llegaronVenta), accent: 'var(--yc-green)' },
   ];
 
   // ── Sparklines (real data only) ───────────────────────
@@ -285,6 +285,7 @@ export function ResumenView({
           stages={stages}
           leadsNuevos={funnelRespondio.leads_nuevos}
           ventaCerrada={funnelRespondio.venta_cerrada}
+          ventaCerradaMonto={funnelRespondio.venta_cerrada_monto}
           ventaPerdida={funnelRespondio.venta_perdida}
           rangeLabel={rangeLabel}
           delay={500}

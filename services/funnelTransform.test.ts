@@ -8,14 +8,17 @@ const row: FunnelRespondioRow = {
   respondieron: 124,
   interesados: 58,
   venta_cerrada: 20,
+  venta_cerrada_monto: 4200,
   venta_perdida: 90,
   tiempo_resp_mediana_min: 36.7,
 };
 
 const stages = buildEmbudoStages(row);
 
-// 6 etapas: leads, primer_mensaje, respondieron(star), interesados, venta_cerrada, agendo(soon)
-assert.equal(stages.length, 6);
+// 5 etapas: leads, primer_mensaje, respondieron(star), interesados, agendo(soon)
+// La venta NO es etapa del embudo — se muestra en "Resultado final" (por fecha del evento).
+assert.equal(stages.length, 5);
+assert.ok(!stages.some((s) => s.id === 'venta_cerrada'));
 assert.equal(stages[0].id, 'leads');
 assert.equal(stages[0].count, 310);
 assert.equal(stages[0].pctOfLeads, 100);

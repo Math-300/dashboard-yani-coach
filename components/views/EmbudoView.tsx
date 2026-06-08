@@ -174,7 +174,7 @@ function BreakdownRow({ stage, leadsNuevos, index }: BreakdownRowProps) {
 
 export default function EmbudoView({ funnelRespondio, rangeLabel }: EmbudoViewProps) {
   const stages = buildEmbudo(funnelRespondio);
-  const { leads_nuevos, venta_cerrada, venta_perdida, tiempo_resp_mediana_min } = funnelRespondio;
+  const { leads_nuevos, venta_cerrada, venta_cerrada_monto, venta_perdida, tiempo_resp_mediana_min } = funnelRespondio;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
@@ -258,6 +258,7 @@ export default function EmbudoView({ funnelRespondio, rangeLabel }: EmbudoViewPr
         stages={stages}
         leadsNuevos={leads_nuevos}
         ventaCerrada={venta_cerrada}
+        ventaCerradaMonto={venta_cerrada_monto}
         ventaPerdida={venta_perdida}
         rangeLabel={rangeLabel}
         delay={120}

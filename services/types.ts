@@ -18,6 +18,7 @@ export interface FunnelRespondioRow {
   respondieron: number;
   interesados: number;
   venta_cerrada: number;
+  venta_cerrada_monto: number;
   venta_perdida: number;
   tiempo_resp_mediana_min: number | null;
 }

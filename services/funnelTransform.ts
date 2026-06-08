@@ -11,8 +11,9 @@ export function buildEmbudoStages(row: FunnelRespondioRow): EmbudoStage[] {
     { id: 'primer_mensaje', label: 'Primer mensaje enviado',    count: row.primer_mensaje },
     { id: 'respondieron',   label: 'Respondieron',              count: row.respondieron, star: true },
     { id: 'interesados',    label: 'Interesados',               count: row.interesados },
-    { id: 'venta_cerrada',  label: 'Venta cerrada',             count: row.venta_cerrada },
     { id: 'agendo',         label: 'Agendó / entró en llamada', count: null, soon: true },
+    // Nota: la venta NO es una etapa del embudo (que es el cohorte de leads del período).
+    // Las ventas/pérdidas se muestran en "Resultado final" contadas por fecha del evento.
   ];
 
   let prevCount: number | null = null;
