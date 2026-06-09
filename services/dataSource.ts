@@ -187,7 +187,7 @@ export async function getInteractions(dateRange?: DateRange | null): Promise<Int
 // Ventas
 // ============================================================================
 
-const SALES_LIMIT = 1000;
+const SALES_LIMIT = 5000;
 
 export async function getSales(dateRange?: DateRange | null): Promise<Sale[]> {
   requireTenant();
