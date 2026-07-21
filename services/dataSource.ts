@@ -195,6 +195,7 @@ export async function getSales(dateRange?: DateRange | null): Promise<Sale[]> {
     .from('ventas')
     .select('nocodb_id, contacto_nocodb_id, vendedora_nocodb_id, producto, amount, fecha, payment_status, sales_cycle_days, raw')
     .eq('tenant_id', TENANT_ID)
+    .not('es_duplicado', 'is', true) // dedup: excluye las marcadas duplicado (mantiene false y null)
     .order('fecha', { ascending: false })
     .limit(SALES_LIMIT);
 
