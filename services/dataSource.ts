@@ -219,6 +219,71 @@ export async function getSales(dateRange?: DateRange | null): Promise<Sale[]> {
 }
 
 // ============================================================================
+// Compradores por producto (drill-down del ranking)
+// ============================================================================
+
+export interface ProductBuyer {
+  contactName: string;
+  sellerName: string | null;
+  amount: number;
+  date: string;
+  paymentStatus: string | null;
+}
+
+/**
+ * Lista de clientas que compraron un producto dado (para el panel de detalle).
+ * Deduplica con `es_duplicado=false` (mismo criterio que el resto del dashboard)
+ * y resuelve nombres de clienta y vendedora.
+ */
+export async function getProductBuyers(
+  producto: string,
+  dateRange?: DateRange | null,
+): Promise<ProductBuyer[]> {
+  requireTenant();
+  let q = supabase
+    .from('ventas')
+    .select('contacto_nocodb_id, vendedora_nocodb_id, amount, fecha, payment_status')
+    .eq('tenant_id', TENANT_ID)
+    .eq('producto', producto)
+    .eq('es_duplicado', false)
+    .order('fecha', { ascending: false })
+    .limit(500);
+
+  if (dateRange) {
+    q = q.gte('fecha', dateRange.start.toISOString()).lte('fecha', dateRange.end.toISOString());
+  }
+
+  const { data, error } = await q;
+  if (error) throw error;
+  const rows = data ?? [];
+
+  // Nombres de clienta (una query por el set de ids).
+  const contactIds = [...new Set(rows.map((r) => r.contacto_nocodb_id).filter((x): x is number => x != null))];
+  const contactName = new Map<number, string>();
+  if (contactIds.length > 0) {
+    const { data: cs, error: cErr } = await supabase
+      .from('contactos')
+      .select('nocodb_id, nombre')
+      .eq('tenant_id', TENANT_ID)
+      .in('nocodb_id', contactIds);
+    if (cErr) throw cErr;
+    for (const c of cs ?? []) contactName.set(c.nocodb_id, c.nombre || 'Sin nombre');
+  }
+
+  // Nombres de vendedora (reusa el rollup existente).
+  const sellers = await getSellers();
+  const sellerName = new Map<string, string>(sellers.map((s) => [s.id, s.name]));
+
+  return rows.map((r) => ({
+    contactName: r.contacto_nocodb_id != null ? contactName.get(r.contacto_nocodb_id) ?? 'Sin nombre' : 'Sin nombre',
+    sellerName: r.vendedora_nocodb_id != null ? sellerName.get(String(r.vendedora_nocodb_id)) ?? null : null,
+    amount: Number(r.amount || 0),
+    date: r.fecha,
+    paymentStatus: r.payment_status ?? null,
+  }));
+}
+
+// ============================================================================
 // Intentos de Compra
 // ============================================================================
 

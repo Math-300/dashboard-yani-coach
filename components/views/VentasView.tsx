@@ -1,7 +1,7 @@
 // Yani Coach Dashboard — VentasView
 // Merges SalesView + RecoveryView into one detail view with sub-tab switch.
 // Visual language: yc-glass cards, gold/dark theme, CSS vars from yc-theme.css.
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   AreaChart, Area,
   BarChart, Bar,
@@ -30,6 +30,7 @@ import {
   CategoryRevenue,
   TrendData,
 } from '../../services/metricsCalculator';
+import { getProductBuyers, ProductBuyer } from '../../services/dataSource';
 
 // ── Props ─────────────────────────────────────────────────
 
@@ -254,6 +255,100 @@ function GranularityPills({ value, onChange }: GranularityPillsProps) {
   );
 }
 
+// ── Panel de detalle: clientas que compraron un producto ──
+
+const ProductBuyersDrawer: React.FC<{
+  product: string | null;
+  dateRange: { start: Date; end: Date };
+  onClose: () => void;
+}> = ({ product, dateRange, onClose }) => {
+  const [buyers, setBuyers] = useState<ProductBuyer[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!product) return;
+    let alive = true;
+    setLoading(true);
+    setError(null);
+    setBuyers(null);
+    getProductBuyers(product, dateRange)
+      .then((b) => { if (alive) setBuyers(b); })
+      .catch((e) => { if (alive) setError(e?.message || 'No se pudo cargar'); })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [product, dateRange]);
+
+  useEffect(() => {
+    if (!product) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [product, onClose]);
+
+  if (!product) return null;
+  const totalAmount = buyers?.reduce((s, b) => s + b.amount, 0) ?? 0;
+
+  return (
+    <div
+      onClick={onClose}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', justifyContent: 'flex-end' }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-label={`Clientas que compraron ${product}`}
+        style={{
+          width: 'min(440px, 100%)', height: '100%', background: 'var(--yc-bg-1)',
+          borderLeft: '1px solid var(--yc-border-hi)', boxShadow: 'var(--yc-shadow)',
+          display: 'flex', flexDirection: 'column',
+        }}
+      >
+        <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--yc-border)', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 12, color: 'var(--yc-text-mute)', marginBottom: 4 }}>Clientas que compraron</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--yc-text)' }}>{product}</div>
+            {buyers && (
+              <div style={{ fontSize: 12.5, color: 'var(--yc-text-mute)', marginTop: 5 }}>
+                {fmt.num(buyers.length)} {buyers.length === 1 ? 'compra' : 'compras'} · {fmt.ars(totalAmount)}
+              </div>
+            )}
+          </div>
+          <button
+            type="button" onClick={onClose} aria-label="Cerrar"
+            style={{ background: 'transparent', border: 'none', color: 'var(--yc-text-mute)', fontSize: 24, lineHeight: 1, cursor: 'pointer', padding: '0 4px' }}
+          >×</button>
+        </div>
+
+        <div style={{ flex: 1, overflowY: 'auto', padding: '8px 12px' }}>
+          {loading && <div style={{ padding: 24, textAlign: 'center', color: 'var(--yc-text-mute)', fontSize: 13 }}>Cargando…</div>}
+          {error && <div style={{ padding: 24, textAlign: 'center', color: 'var(--yc-red)', fontSize: 13 }}>{error}</div>}
+          {buyers && buyers.length === 0 && (
+            <div style={{ padding: 24, textAlign: 'center', color: 'var(--yc-text-mute)', fontSize: 13 }}>Sin compras en este período.</div>
+          )}
+          {buyers && buyers.map((b, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px', borderRadius: 10, background: i % 2 ? 'transparent' : 'rgba(255,255,255,0.025)' }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: 13.5, color: 'var(--yc-text)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{b.contactName}</div>
+                <div style={{ fontSize: 12, color: 'var(--yc-text-mute)', marginTop: 2 }}>
+                  {new Date(b.date).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  {b.sellerName ? ` · ${b.sellerName}` : ''}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                <div className="yc-num" style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--yc-text)' }}>{fmt.ars(b.amount)}</div>
+                {b.paymentStatus && (
+                  <div style={{ fontSize: 11, color: b.paymentStatus === 'Pagado' ? 'var(--yc-green)' : 'var(--yc-text-mute)', marginTop: 2 }}>{b.paymentStatus}</div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── VENTAS TAB ────────────────────────────────────────────
 
 interface VentasTabProps {
@@ -263,6 +358,7 @@ interface VentasTabProps {
 
 function VentasTab({ sales, dateRange }: VentasTabProps) {
   const [gran, setGran] = useState<'day' | 'week' | 'month'>('week');
+  const [drillProduct, setDrillProduct] = useState<string | null>(null);
 
   const metrics = useMemo(() => {
     const totalRevenue = calculateTotalRevenue(sales, dateRange);
@@ -421,7 +517,12 @@ function VentasTab({ sales, dateRange }: VentasTabProps) {
                   width={160}
                 />
                 <Tooltip content={<ProductTooltip />} />
-                <Bar dataKey="quantity" radius={[0, 4, 4, 0]}>
+                <Bar
+                  dataKey="quantity"
+                  radius={[0, 4, 4, 0]}
+                  cursor="pointer"
+                  onClick={(d: any) => { if (d?.productName) setDrillProduct(d.productName); }}
+                >
                   {topProducts.map((_, i) => (
                     <Cell key={i} fill={GOLD_PALETTE[i % GOLD_PALETTE.length]} />
                   ))}
@@ -536,9 +637,12 @@ function VentasTab({ sales, dateRange }: VentasTabProps) {
                 {metrics.productRevenue.slice(0, 10).map((p, i) => (
                   <tr
                     key={p.productName}
+                    title="Ver clientas que compraron"
+                    onClick={() => setDrillProduct(p.productName)}
                     style={{
                       borderBottom: '1px solid rgba(255,255,255,0.04)',
                       transition: 'background 0.12s',
+                      cursor: 'pointer',
                     }}
                     onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
@@ -554,7 +658,10 @@ function VentasTab({ sales, dateRange }: VentasTabProps) {
                         {i + 1}
                       </div>
                     </td>
-                    <td style={{ padding: '9px 10px', color: 'var(--yc-text)', fontWeight: 500 }}>{p.productName}</td>
+                    <td style={{ padding: '9px 10px', color: 'var(--yc-text)', fontWeight: 500 }}>
+                      {p.productName}
+                      <span style={{ color: 'var(--yc-text-mute)', marginLeft: 6, fontSize: 12 }}>›</span>
+                    </td>
                     <td style={{ padding: '9px 10px', textAlign: 'center', color: 'var(--yc-text-mute)' }}>{fmt.num(p.quantity)}</td>
                     <td style={{ padding: '9px 10px', textAlign: 'right' }}>
                       <span className="yc-num" style={{ fontWeight: 600, color: 'var(--yc-text)' }}>{fmt.ars(p.revenue)}</span>
@@ -576,6 +683,12 @@ function VentasTab({ sales, dateRange }: VentasTabProps) {
           <EmptyState msg="Sin datos de ventas en el período" />
         )}
       </SectionCard>
+
+      <ProductBuyersDrawer
+        product={drillProduct}
+        dateRange={dateRange}
+        onClose={() => setDrillProduct(null)}
+      />
 
       {/* Recent sales list (last 8) */}
       {sales.length > 0 && (
