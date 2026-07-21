@@ -53,6 +53,25 @@ const STATUS_COLORS: Record<string, string> = {
   Abandonado: '#f0a050',
 };
 
+// Trunca nombres largos a una sola línea (el nombre completo vive en el tooltip).
+const truncateLabel = (s: string, max = 22): string =>
+  s.length > max ? `${s.slice(0, max - 1).trimEnd()}…` : s;
+
+// Tick de una sola línea para el eje Y del ranking de productos.
+// Evita que Recharts parta los nombres largos en varias líneas encimadas.
+const ProductYTick = ({ x, y, payload }: any) => (
+  <text
+    x={x}
+    y={y}
+    dy={4}
+    textAnchor="end"
+    fontSize={11.5}
+    fill="var(--yc-text-mute)"
+  >
+    {truncateLabel(String(payload?.value ?? ''))}
+  </text>
+);
+
 // ── Tooltip helpers ───────────────────────────────────────
 
 const TooltipBox: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -378,11 +397,12 @@ function VentasTab({ sales, dateRange }: VentasTabProps) {
           delay={100}
         >
           {topProducts.length > 0 ? (
-            <ResponsiveContainer width="100%" height={280} minHeight={200} minWidth={0} debounce={200}>
+            <ResponsiveContainer width="100%" height={380} minHeight={280} minWidth={0} debounce={200}>
               <BarChart
                 layout="vertical"
                 data={topProducts}
                 margin={{ top: 10, right: 20, bottom: 10, left: 10 }}
+                barCategoryGap="28%"
               >
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="var(--yc-border)" />
                 <XAxis
@@ -394,10 +414,11 @@ function VentasTab({ sales, dateRange }: VentasTabProps) {
                 <YAxis
                   type="category"
                   dataKey="productName"
-                  tick={{ fontSize: 12, fill: 'var(--yc-text-mute)' }}
+                  tick={<ProductYTick />}
+                  interval={0}
                   axisLine={false}
                   tickLine={false}
-                  width={110}
+                  width={160}
                 />
                 <Tooltip content={<ProductTooltip />} />
                 <Bar dataKey="quantity" radius={[0, 4, 4, 0]}>
