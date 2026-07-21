@@ -246,7 +246,7 @@ export async function getProductBuyers(
     .select('contacto_nocodb_id, vendedora_nocodb_id, amount, fecha, payment_status')
     .eq('tenant_id', TENANT_ID)
     .eq('producto', producto)
-    .eq('es_duplicado', false)
+    .not('es_duplicado', 'is', true) // dedup idéntico a getSales (mantiene false y null)
     .order('fecha', { ascending: false })
     .limit(500);
 
