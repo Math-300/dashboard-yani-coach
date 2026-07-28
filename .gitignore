@@ -22,9 +22,13 @@ dist-ssr
 *.njsproj
 *.sln
 # Environment variables - NO COMMIT
+# Regla amplia: cualquier .env queda fuera salvo el ejemplo. El VPS tiene
+# .env.build / .env.deploy / .env.sync sin trackear y las reglas viejas
+# (.env, .env.local, .env.production) NO los cubrían: un `git add -A` ahí
+# habría commiteado tokens de NocoDB, Chatwoot y la service_role de Supabase.
 .env
-.env.local
-.env.production
+.env.*
+!.env.example
 
 .vercel
 
