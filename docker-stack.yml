@@ -86,6 +86,42 @@ services:
       retries: 3
       start_period: 20s
 
+  # Proxy de ritmo delante de NocoDB Cloud — cura del 429 (pacing global <5/s + backoff 429).
+  # Build: docker build -f scripts/nocodb-proxy/Dockerfile -t yani-nocodb-proxy:local .
+  # n8n le pega por DNS interno de la red Yanicoach: http://yani_nocodb_proxy:8090
+  # (requiere que el contenedor n8n esté unido a la red `Yanicoach`; si no, ver nota en el runbook).
+  yani_nocodb_proxy:
+    image: yani-nocodb-proxy:local
+    environment:
+      PORT: "8090"
+      NOCODB_UPSTREAM: "${NOCODB_UPSTREAM:-https://app.nocodb.com}"
+      RATE_PER_SEC: "${PROXY_RATE_PER_SEC:-4}"
+      BUCKET_CAPACITY: "${PROXY_BUCKET_CAPACITY:-4}"
+      MAX_ATTEMPTS: "8"
+      MAX_BACKOFF_MS: "30000"
+      NODE_ENV: "production"
+      # NOCODB_INJECT_TOKEN: queda VACÍO = passthrough (cada workflow manda su propio xc-token).
+      # Solo setear en la fase de hardening si se decide centralizar el token.
+    networks:
+      - yanicoach
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 32M
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:8090/health', r => r.statusCode===200?process.exit(0):process.exit(1))"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
 networks:
   yanicoach:
     external: true

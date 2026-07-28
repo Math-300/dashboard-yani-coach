@@ -43,3 +43,7 @@ console-debug.log
 
 # Operational brain notes — local only, may contain secrets
 .brain/
+
+# Contexto local de Claude — se regenera por sesión, no va al repo
+CLAUDE.local.md
+**/CLAUDE.local.md
