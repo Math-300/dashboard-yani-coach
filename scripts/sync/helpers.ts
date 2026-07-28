@@ -7,7 +7,7 @@ export function mapEstadoSimplificado(raw: unknown): string | null {
   if (raw === 'Nuevo' || raw === 'Lead Nuevo') return 'Nuevo';
   if (raw === 'Venta Cerrada' || raw === 'Venta Ganada') return 'Venta Cerrada';
   if (raw === 'Interesado') return 'Interesado';
-  if (raw === 'Llamada Agendada' || raw === 'Seguimiento Potencial venta') return 'Interesado';
+  if (raw === 'Llamada Agendada' || raw === 'Esperando Reserva' || raw === 'Seguimiento Potencial venta') return 'Interesado';
   if (
     raw === 'Venta Perdida' ||
     raw === 'no contactar' ||
@@ -92,6 +92,10 @@ export function cleanRaw(row: Record<string, unknown>, extraKeys: string[] = [])
     'Avatar',
     'Foto',
     'Adjuntos',
+    // No es ruido: es un secreto. `raw` viaja al navegador de cualquiera que abra el
+    // dashboard, porque las políticas RLS del espejo son `USING (true)`. Ninguna
+    // credencial puede entrar acá, venga de la tabla que venga.
+    'Contraseña Nocodb',
     ...extraKeys,
   ]);
   const out: Record<string, unknown> = {};

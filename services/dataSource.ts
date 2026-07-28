@@ -75,27 +75,18 @@ function requireTenant() {
 
 export async function getSellers(): Promise<Seller[]> {
   requireTenant();
-  const [perf, base] = await Promise.all([
-    supabase
-      .from('mv_vendedora_performance')
-      .select('vendedora_nocodb_id, nombre, estado, sales_count, total_amount, leads_total, interactions_count')
-      .eq('tenant_id', TENANT_ID),
-    supabase
-      .from('vendedoras')
-      .select('nocodb_id, raw')
-      .eq('tenant_id', TENANT_ID),
-  ]);
+  // Se eliminó la consulta a `vendedoras` que traía `raw`. Lo único que se le pedía era
+  // `raw.Foto` para el avatar, pero `cleanRaw` descarta `Foto` en el sync: nunca se
+  // resolvió. Lo que sí entregaba a cada navegador que abría el tablero era la
+  // `Contraseña Nocodb` de cada asesora, porque la política RLS del espejo es `USING (true)`.
+  const perf = await supabase
+    .from('mv_vendedora_performance')
+    .select('vendedora_nocodb_id, nombre, estado, sales_count, total_amount, leads_total, interactions_count')
+    .eq('tenant_id', TENANT_ID);
   if (perf.error) throw perf.error;
-  if (base.error) throw base.error;
-
-  const rawById = new Map<number, Record<string, any>>();
-  for (const v of base.data ?? []) rawById.set(v.nocodb_id, (v.raw as Record<string, any>) || {});
 
   return (perf.data ?? []).map((v) => {
-    const raw = rawById.get(v.vendedora_nocodb_id) || {};
-    // Avatar: primer attachment de `Foto` de NocoDB (signedUrl) — best effort
-    const foto = Array.isArray(raw.Foto) && raw.Foto.length > 0 ? raw.Foto[0] : null;
-    const avatarUrl = foto?.signedUrl || foto?.url || undefined;
+    const avatarUrl = undefined;
     return {
       id: String(v.vendedora_nocodb_id),
       name: v.nombre || 'Sin Nombre',
@@ -160,7 +151,7 @@ export async function getInteractions(dateRange?: DateRange | null): Promise<Int
   requireTenant();
   let q = supabase
     .from('interacciones')
-    .select('nocodb_id, contacto_nocodb_id, vendedora_nocodb_id, tipo, medio_canal, fecha, duracion_segundos, raw')
+    .select('nocodb_id, contacto_nocodb_id, vendedora_nocodb_id, tipo, medio_canal, fecha, duracion_segundos, resultado')
     .eq('tenant_id', TENANT_ID)
     .order('fecha', { ascending: false })
     .limit(INTERACTION_LIMIT);
@@ -179,7 +170,7 @@ export async function getInteractions(dateRange?: DateRange | null): Promise<Int
     type: toInteractionType(i.medio_canal, i.tipo),
     date: i.fecha || new Date().toISOString(),
     durationSeconds: i.duracion_segundos || 0,
-    result: (i.raw as any)?.Resultado || '',
+    result: i.resultado || '',
   }));
 }
 
@@ -193,7 +184,7 @@ export async function getSales(dateRange?: DateRange | null): Promise<Sale[]> {
   requireTenant();
   let q = supabase
     .from('ventas')
-    .select('nocodb_id, contacto_nocodb_id, vendedora_nocodb_id, producto, amount, fecha, payment_status, sales_cycle_days, raw')
+    .select('nocodb_id, contacto_nocodb_id, vendedora_nocodb_id, producto, amount, fecha, payment_status, sales_cycle_days, tipo_oferta')
     .eq('tenant_id', TENANT_ID)
     .not('es_duplicado', 'is', true) // dedup: excluye las marcadas duplicado (mantiene false y null)
     .order('fecha', { ascending: false })
@@ -215,7 +206,7 @@ export async function getSales(dateRange?: DateRange | null): Promise<Sale[]> {
     date: s.fecha || new Date().toISOString(),
     paymentStatus: s.payment_status || undefined,
     salesCycleDays: s.sales_cycle_days || undefined,
-    category: (s.raw as any)?.['Tipo de Oferta'] || undefined,
+    category: s.tipo_oferta || undefined,
   }));
 }
 
@@ -294,7 +285,7 @@ export async function getAttempts(dateRange?: DateRange | null): Promise<Purchas
   requireTenant();
   let q = supabase
     .from('intentos_compra')
-    .select('nocodb_id, contacto_nocodb_id, status, fecha, recovery_seller_nocodb_id, raw')
+    .select('nocodb_id, contacto_nocodb_id, status, fecha, recovery_seller_nocodb_id, monto_a_recuperar')
     .eq('tenant_id', TENANT_ID)
     .order('fecha', { ascending: false })
     .limit(ATTEMPTS_LIMIT);
@@ -309,7 +300,7 @@ export async function getAttempts(dateRange?: DateRange | null): Promise<Purchas
   return (data ?? []).map((a) => ({
     id: String(a.nocodb_id),
     contactId: a.contacto_nocodb_id != null ? String(a.contacto_nocodb_id) : '',
-    amount: Number((a.raw as any)?.['Monto a Recuperar'] || 0),
+    amount: Number(a.monto_a_recuperar || 0),
     status: toAttemptStatus(a.status),
     date: a.fecha || new Date().toISOString(),
     recoverySellerId:

@@ -2,7 +2,7 @@ import { env } from './env.js';
 import { fetchAllRows, NocoRow } from './nocodbClient.js';
 import { listAgents } from './chatwootClient.js';
 import { supabaseAdmin } from './supabaseAdmin.js';
-import { chunk, cleanRaw, toIsoDate, toNumber, toText } from './helpers.js';
+import { chunk, toIsoDate, toNumber, toText } from './helpers.js';
 
 const BATCH_SIZE = 200;
 
@@ -13,7 +13,6 @@ export interface VendedoraRecord {
   email: string | null;
   estado: string | null;
   chatwoot_agent_id: number | null;
-  raw: Record<string, unknown>;
   nocodb_created_at: string | null;
   nocodb_updated_at: string | null;
   synced_at: string;
@@ -38,7 +37,6 @@ function normalize(
     email,
     estado: toText(row['Estado']),
     chatwoot_agent_id: chatwootAgentId,
-    raw: cleanRaw(row),
     nocodb_created_at: toIsoDate(row['CreatedAt']),
     nocodb_updated_at: toIsoDate(row['UpdatedAt']),
     synced_at: new Date().toISOString(),

@@ -1,7 +1,7 @@
 import { env } from './env.js';
 import { fetchAllRows, NocoRow } from './nocodbClient.js';
 import { supabaseAdmin } from './supabaseAdmin.js';
-import { chunk, cleanRaw, toIsoDate, toNumber, toText } from './helpers.js';
+import { chunk, toIsoDate, toNumber, toText } from './helpers.js';
 
 const BATCH_SIZE = 200;
 
@@ -15,7 +15,7 @@ interface IntentoRecord {
   status: string | null;
   fecha: string | null;
   recovery_seller_nocodb_id: number | null;
-  raw: Record<string, unknown>;
+  monto_a_recuperar: number | null;
   synced_at: string;
 }
 
@@ -58,7 +58,8 @@ function normalize(
     status: toText(row['Estado']),
     fecha: toIsoDate(row['Fecha de Alerta']) ?? toIsoDate(row['CreatedAt']),
     recovery_seller_nocodb_id: recoveryId,
-    raw: cleanRaw(row, ['Usuario Vendedora']),
+    // El dashboard lo usaba leyéndolo de `raw`; ahora es columna propia.
+    monto_a_recuperar: toNumber(row['Monto a Recuperar']),
     synced_at: new Date().toISOString(),
   };
 }

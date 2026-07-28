@@ -22,7 +22,6 @@ interface ConvRecord {
   primer_inbound_at: string | null;
   tiempo_primera_respuesta_seg: number | null;
   last_activity_at: string | null;
-  raw: Record<string, unknown>;
   synced_at: string;
 }
 
@@ -118,7 +117,6 @@ export async function syncChatwoot(tenantId: string, runId: string) {
         primer_inbound_at: isoFromEpoch(r.primer_inbound_at),
         tiempo_primera_respuesta_seg: r.tiempo_primera_respuesta_seg,
         last_activity_at: isoFromEpoch(c.last_activity_at),
-        raw: { phone: c.contact_phone, email: c.contact_email },
         synced_at: new Date().toISOString(),
       };
       processed++;

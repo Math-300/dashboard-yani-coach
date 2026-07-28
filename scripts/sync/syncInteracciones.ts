@@ -2,7 +2,7 @@ import { env } from './env.js';
 import { fetchAllRows, NocoRow } from './nocodbClient.js';
 import { getIncrementalWindowDays, updatedWithinWhere } from './incremental.js';
 import { supabaseAdmin } from './supabaseAdmin.js';
-import { chunk, cleanRaw, toIsoDate, toNumber, toText } from './helpers.js';
+import { chunk, toIsoDate, toNumber, toText } from './helpers.js';
 
 const BATCH_SIZE = 500;
 
@@ -16,9 +16,8 @@ interface InteraccionRecord {
   tipo: string | null;
   medio_canal: string | null;
   fecha: string | null;
-  resumen: string | null;
+  resultado: string | null;
   duracion_segundos: number | null;
-  raw: Record<string, unknown>;
   synced_at: string;
 }
 
@@ -59,9 +58,11 @@ function normalize(
     tipo: toText(row['Tipo']),
     medio_canal: toText(row['Medio/Canal']),
     fecha: toIsoDate(row['Fecha']) ?? toIsoDate(row['CreatedAt']),
-    resumen: toText(row['Resumen de la Interacción']),
+    // `Resultado` es el único campo de la fila de NocoDB que el dashboard lee de acá.
+    // `Resumen de la Interacción` se dejó de espejar: es texto libre donde quedan escritos
+    // teléfonos y emails ("se envió el template al número +52…"), y no lo leía nadie.
+    resultado: toText(row['Resultado']),
     duracion_segundos: durSec,
-    raw: cleanRaw(row, ['Usuario Vendedora']),
     synced_at: new Date().toISOString(),
   };
 }

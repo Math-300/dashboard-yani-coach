@@ -17,6 +17,14 @@ interface VentaRecord {
   fecha: string | null;
   payment_status: string | null;
   sales_cycle_days: number | null;
+  tipo_oferta: string | null;
+  // `ventas` es la única tabla que conserva `raw`, y no por comodidad: la columna GENERADA
+  // `es_duplicado` se calcula con `raw->>'origen'`, y de ella dependen la política RLS de la
+  // tabla y dos vistas materializadas. Sacar `raw` acá reclasificaría las ventas viejas del
+  // backfill CSV y cambiaría la facturación histórica de feb-may.
+  // Se le quita `email` (982 filas lo traían desde el import CSV): no lo lee nadie.
+  // Pendiente: promover `origen` a columna propia, redefinir `es_duplicado`, y recién ahí
+  // sacar `raw` — es una operación aparte, con verificación de totales antes y después.
   raw: Record<string, unknown>;
   synced_at: string;
 }
@@ -67,7 +75,9 @@ function normalize(
     fecha: toIsoDate(row['Fecha']) ?? toIsoDate(row['CreatedAt']),
     payment_status: toText(row['Estado del Pago']),
     sales_cycle_days: toNumber(row['Sales_Cycle_Days']),
-    raw: cleanRaw(row, ['Usuario Vendedora']),
+    // El dashboard lo usaba leyéndolo de `raw`; ahora es columna propia.
+    tipo_oferta: toText(row['Tipo de Oferta']),
+    raw: cleanRaw(row, ['Usuario Vendedora', 'email']),
     synced_at: new Date().toISOString(),
   };
 }

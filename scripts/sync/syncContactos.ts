@@ -1,9 +1,9 @@
 import { env } from './env.js';
 import { fetchAllRows, NocoRow } from './nocodbClient.js';
+import { getIncrementalWindowDays, updatedWithinWhere } from './incremental.js';
 import { supabaseAdmin } from './supabaseAdmin.js';
 import {
   chunk,
-  cleanRaw,
   mapEstadoSimplificado,
   maxIsoDate,
   toIsoDate,
@@ -16,10 +16,10 @@ const BATCH_SIZE = 500;
 export interface ContactoRecord {
   tenant_id: string;
   nocodb_id: number;
+  // Sin `apellido`, `email` ni `telefono`: el dashboard no los lee (ni el front, ni las RPCs,
+  // ni las vistas). El espejo es una caché de lectura, así que no tiene por qué guardar datos
+  // de contacto de 32.900 personas. NocoDB los sigue teniendo — acá se dejan de copiar.
   nombre: string | null;
-  apellido: string | null;
-  email: string | null;
-  telefono: string | null;
   chatwoot_contact_id: string | null;
   pais: string | null;
   estado_actual: string | null;
@@ -30,12 +30,10 @@ export interface ContactoRecord {
   estimated_value: number | null;
   lead_age_days: number | null;
   proximo_contacto: string | null;
-  registrar_actividad: string | null;
   etiquetas: string[];
   last_interaction_at: string | null;
   nocodb_created_at: string | null;
   nocodb_updated_at: string | null;
-  raw: Record<string, unknown>;
   synced_at: string;
 }
 
@@ -71,9 +69,6 @@ function normalize(
     tenant_id: tenantId,
     nocodb_id: nocoId,
     nombre: toText(row['Nombre']),
-    apellido: toText(row['Apellido']),
-    email: toText(row['Email']),
-    telefono: toText(row['Teléfono']),
     chatwoot_contact_id: toText(row['chatwoot_contact_id']),
     pais: toText(row['País']),
     estado_actual: estadoActual,
@@ -84,12 +79,10 @@ function normalize(
     estimated_value: toNumber(row['EstimatedValue']),
     lead_age_days: toNumber(row['Lead_Age_Days']),
     proximo_contacto: toIsoDate(row['Próximo Contacto']),
-    registrar_actividad: toText(row['Registrar Actividad']),
     etiquetas,
     last_interaction_at: maxIsoDate(row['Last_Interaction']),
     nocodb_created_at: toIsoDate(row['CreatedAt']),
     nocodb_updated_at: toIsoDate(row['UpdatedAt']),
-    raw: cleanRaw(row, ['Resumen de la Interacción (from Interacciones)']),
     synced_at: new Date().toISOString(),
   };
 }
@@ -101,7 +94,14 @@ export async function syncContactos(tenantId: string, runId: string) {
   const vendedoraMap = await loadVendedoraMap(tenantId);
   console.log(`  ${vendedoraMap.size} vendedoras cargadas para FK lookup`);
 
-  const rows = await fetchAllRows(env.TABLE_CONTACTS, 'contactos');
+  const windowDays = await getIncrementalWindowDays(tenantId, 'contactos');
+  const where = windowDays === null ? undefined : updatedWithinWhere(windowDays);
+  console.log(
+    where === undefined
+      ? '  modo FULL (reconcile / sin sync previo / FORCE_FULL_SYNC)'
+      : `  modo INCREMENTAL: últimos ${windowDays} días (UpdatedAt/CreatedAt)`,
+  );
+  const rows = await fetchAllRows(env.TABLE_CONTACTS, 'contactos', where);
   const records = rows
     .map((r) => normalize(r, tenantId, vendedoraMap))
     .filter((r): r is ContactoRecord => r !== null);
