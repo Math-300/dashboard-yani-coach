@@ -3,13 +3,13 @@
  * `createGuardedRunner` garantiza que nunca corran dos syncs en paralelo
  * (el `POST /run` manual y el timer comparten la misma guarda).
  */
-export function createGuardedRunner<T>(runFn: () => Promise<T>) {
+export function createGuardedRunner<A extends unknown[], T>(runFn: (...args: A) => Promise<T>) {
   let running = false;
-  async function trigger(): Promise<{ skipped: true } | { skipped: false; result: T }> {
+  async function trigger(...args: A): Promise<{ skipped: true } | { skipped: false; result: T }> {
     if (running) return { skipped: true };
     running = true;
     try {
-      const result = await runFn();
+      const result = await runFn(...args);
       return { skipped: false, result };
     } finally {
       running = false;

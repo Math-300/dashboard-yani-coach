@@ -16,7 +16,8 @@ const PORT = Number(process.env.PORT ?? 3000);
 const ROOT = resolve(process.cwd());
 const SYNC_ENTRY = resolve(ROOT, 'scripts/sync/index.ts');
 const MAX_DURATION_MS = 25 * 60 * 1000;       // 25 min — full sync real ~15min (NocoDB ~7min + Chatwoot ~8min) + FK/MV; margen ante throttle 429 NocoDB y rate-limit Chatwoot
-const SYNC_INTERVAL_MS = 60 * 60 * 1000;      // 1h — frescura del espejo
+const SYNC_INTERVAL_MS = 60 * 60 * 1000;      // 1h — frescura del espejo (incremental)
+const FULL_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24h — reconcile full 1×/día (FORCE_FULL_SYNC)
 
 interface RunResult {
   ok: boolean;
@@ -26,13 +27,16 @@ interface RunResult {
   log: string;
 }
 
-function runPipeline(): Promise<RunResult> {
+function runPipeline(full = false): Promise<RunResult> {
   return new Promise((resolveRun) => {
     const started = Date.now();
     const chunks: string[] = [];
+    // full=true → reconcile: FORCE_FULL_SYNC=1 hace que incremental.ts devuelva null
+    // en todos los cortes y el sync haga full-scan (baseline de seguridad diario).
+    const childEnv = full ? { ...process.env, FORCE_FULL_SYNC: '1' } : process.env;
     const child = spawn('npx', ['tsx', SYNC_ENTRY], {
       cwd: ROOT,
-      env: process.env,
+      env: childEnv,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     const timer = setTimeout(() => {
@@ -81,14 +85,28 @@ app.post('/run', async (_req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[sync-server] listening on :${PORT}`);
+  // Timer horario: sync incremental (frescura del espejo).
   startSchedule(SYNC_INTERVAL_MS, async () => {
-    console.log('[scheduler] disparando sync programado...');
-    const out = await runner.trigger();
+    console.log('[scheduler] disparando sync incremental programado...');
+    const out = await runner.trigger(false);
     if (out.skipped === true) {
       console.warn('[scheduler] sync ya en curso, salteo esta vuelta');
       return;
     }
     if (!out.result.ok) console.error('[scheduler] sync falló:', out.result.log);
     else console.log(`[scheduler] sync ok en ${out.result.elapsed_ms}ms`);
+  });
+
+  // Timer diario: reconcile full (FORCE_FULL_SYNC). Comparte la misma guarda
+  // anti-solape que el incremental y el POST /run (mismo `runner`).
+  startSchedule(FULL_SYNC_INTERVAL_MS, async () => {
+    console.log('[scheduler] disparando reconcile FULL diario...');
+    const out = await runner.trigger(true);
+    if (out.skipped === true) {
+      console.warn('[scheduler] sync ya en curso, salteo reconcile esta vuelta');
+      return;
+    }
+    if (!out.result.ok) console.error('[scheduler] reconcile falló:', out.result.log);
+    else console.log(`[scheduler] reconcile ok en ${out.result.elapsed_ms}ms`);
   });
 });

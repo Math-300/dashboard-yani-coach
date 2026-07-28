@@ -1,5 +1,6 @@
 import { env } from './env.js';
 import { fetchAllRows, NocoRow } from './nocodbClient.js';
+import { getIncrementalWindowDays, updatedWithinWhere } from './incremental.js';
 import { supabaseAdmin } from './supabaseAdmin.js';
 import { chunk, cleanRaw, toIsoDate, toNumber, toText } from './helpers.js';
 
@@ -72,7 +73,14 @@ export async function syncInteracciones(tenantId: string, runId: string) {
   const lookups = await loadLookups(tenantId);
   console.log(`  FK maps: ${lookups.vendedoras.size} vendedoras, ${lookups.contactos.size} contactos`);
 
-  const rows = await fetchAllRows(env.TABLE_INTERACTIONS, 'interacciones');
+  const windowDays = await getIncrementalWindowDays(tenantId, 'interacciones');
+  const where = windowDays === null ? undefined : updatedWithinWhere(windowDays);
+  console.log(
+    where === undefined
+      ? '  modo FULL (reconcile / sin sync previo / FORCE_FULL_SYNC)'
+      : `  modo INCREMENTAL: últimos ${windowDays} días (UpdatedAt/CreatedAt)`,
+  );
+  const rows = await fetchAllRows(env.TABLE_INTERACTIONS, 'interacciones', where);
   const records = rows.map((r) => normalize(r, tenantId, lookups)).filter((r): r is InteraccionRecord => r !== null);
 
   let upserted = 0;

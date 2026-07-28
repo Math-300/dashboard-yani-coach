@@ -20,14 +20,19 @@ const MAX_BACKOFF_MS = 30000;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function fetchPage(tableId: string, offset: number): Promise<PageResponse> {
-  const url = `${env.NOCODB_URL}/api/v2/tables/${tableId}/records?limit=${PAGE_SIZE}&offset=${offset}`;
+async function fetchPage(tableId: string, offset: number, where?: string): Promise<PageResponse> {
+  const whereParam = where ? `&where=${encodeURIComponent(where)}` : '';
+  const url = `${env.NOCODB_URL}/api/v2/tables/${tableId}/records?limit=${PAGE_SIZE}&offset=${offset}${whereParam}`;
   // Reintento con backoff exponencial ante 429 (rate limit NocoDB Cloud) y 5xx
   // transitorios. Honra el header `Retry-After` si el server lo manda.
   let lastStatus = 0;
   let lastText = '';
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    const res = await fetch(url, { headers: { 'xc-token': env.NOCODB_TOKEN } });
+    // `x-noco-priority: low` → el proxy de ritmo prioriza el tráfico en vivo (leads)
+    // sobre este batch. Si NOCODB_URL apunta directo a NocoDB Cloud, el header se ignora.
+    const res = await fetch(url, {
+      headers: { 'xc-token': env.NOCODB_TOKEN, 'x-noco-priority': 'low' },
+    });
     if (res.ok) return res.json() as Promise<PageResponse>;
     lastStatus = res.status;
     lastText = res.statusText;
@@ -47,12 +52,13 @@ async function fetchPage(tableId: string, offset: number): Promise<PageResponse>
 export async function fetchAllRows(
   tableId: string,
   label: string,
+  where?: string,
 ): Promise<NocoRow[]> {
   const rows: NocoRow[] = [];
   let offset = 0;
   let total = Infinity;
   while (offset < total) {
-    const page = await fetchPage(tableId, offset);
+    const page = await fetchPage(tableId, offset, where);
     rows.push(...page.list);
     total = page.pageInfo.totalRows;
     if (page.pageInfo.isLastPage) break;

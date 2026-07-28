@@ -1,5 +1,6 @@
 import { listConversations, listMessages } from './chatwootClient.js';
 import { deriveRespondio, deriveTemplateSends } from './respondio.js';
+import { getChatwootCursorEpoch } from './incremental.js';
 import { supabaseAdmin } from './supabaseAdmin.js';
 import { chunk } from './helpers.js';
 
@@ -60,8 +61,23 @@ export async function syncChatwoot(tenantId: string, runId: string) {
 
   const envios: PlantillaEnvioRecord[] = [];
 
-  const convs = await listConversations();
-  console.log(`  ${convs.length} conversaciones listadas`);
+  const allConvs = await listConversations();
+  console.log(`  ${allConvs.length} conversaciones listadas`);
+
+  // Incremental: sólo procesar convs con actividad desde el último sync exitoso
+  // (menos 2h de solape). En modo full/reconcile (cursor null) se procesan todas.
+  // Traer los mensajes de cada conv es 1 request/conv y domina el tiempo (~8min full),
+  // así que filtrar acá es lo que baja la carga sobre Chatwoot.
+  const cursorEpoch = await getChatwootCursorEpoch(tenantId);
+  const convs =
+    cursorEpoch === null
+      ? allConvs
+      : allConvs.filter((c) => (c.last_activity_at ?? 0) >= cursorEpoch);
+  console.log(
+    cursorEpoch === null
+      ? `  modo FULL: ${convs.length} conversaciones a procesar`
+      : `  modo INCREMENTAL: ${convs.length}/${allConvs.length} activas desde el último sync`,
+  );
 
   // Pool de workers paralelos: cada uno toma conversaciones por índice estriado
   // (k, k+N, k+2N…). El fetch de mensajes (1 request/conv) domina el tiempo;
@@ -113,8 +129,17 @@ export async function syncChatwoot(tenantId: string, runId: string) {
     Array.from({ length: Math.min(FETCH_CONCURRENCY, convs.length) }, (_, k) => worker(k)),
   );
 
+  // Dedup defensivo por chatwoot_conversation_id (último gana): listConversations
+  // pagina sobre datos vivos y puede devolver la misma conv en 2 páginas → sin esto
+  // el upsert tira Postgres 21000 "ON CONFLICT DO UPDATE cannot affect row a second time".
+  const convsByIdMap = new Map<number, ConvRecord>();
+  for (const rec of records) {
+    if (rec) convsByIdMap.set(rec.chatwoot_conversation_id, rec);
+  }
+  const recordsUnicos = [...convsByIdMap.values()];
+
   let upserted = 0;
-  for (const batch of chunk(records, BATCH_SIZE)) {
+  for (const batch of chunk(recordsUnicos, BATCH_SIZE)) {
     const { error, count } = await supabaseAdmin
       .from('chatwoot_conversaciones')
       .upsert(batch, {
