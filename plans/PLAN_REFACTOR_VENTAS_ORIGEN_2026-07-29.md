@@ -368,8 +368,10 @@ El servicio solo escucha en la overlay interna, así que se dispara desde adentr
 
 ```bash
 ssh root@154.38.179.209 'CID=$(docker ps -q -f name=yani-dashboard_yani_dashboard_sync | head -1); \
-  docker exec "$CID" sh -c "curl -s -m 1500 -X POST localhost:3000/run" | head -c 600'
+  docker exec "$CID" node -e "fetch(\"http://localhost:3000/run\",{method:\"POST\"}).then(r=>r.text()).then(t=>console.log(t.slice(0,900)))"'
 ```
+
+La imagen del sync **no trae `curl`** (verificado al ejecutar: `sh: curl: not found`). Se usa el `fetch` de Node, que sí está.
 
 Esperado: JSON con `"ok":true`. Si devuelve 409, hay un sync en curso: esperar y reintentar.
 
