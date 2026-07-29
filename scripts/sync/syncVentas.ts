@@ -1,7 +1,7 @@
 import { env } from './env.js';
 import { fetchAllRows, NocoRow } from './nocodbClient.js';
 import { supabaseAdmin } from './supabaseAdmin.js';
-import { chunk, cleanRaw, toIsoDate, toNumber, toText } from './helpers.js';
+import { chunk, toIsoDate, toNumber, toText } from './helpers.js';
 
 const BATCH_SIZE = 200;
 
@@ -18,14 +18,13 @@ interface VentaRecord {
   payment_status: string | null;
   sales_cycle_days: number | null;
   tipo_oferta: string | null;
-  // `ventas` es la única tabla que conserva `raw`, y no por comodidad: la columna GENERADA
-  // `es_duplicado` se calcula con `raw->>'origen'`, y de ella dependen la política RLS de la
-  // tabla y dos vistas materializadas. Sacar `raw` acá reclasificaría las ventas viejas del
-  // backfill CSV y cambiaría la facturación histórica de feb-may.
-  // Se le quita `email` (982 filas lo traían desde el import CSV): no lo lee nadie.
-  // Pendiente: promover `origen` a columna propia, redefinir `es_duplicado`, y recién ahí
-  // sacar `raw` — es una operación aparte, con verificación de totales antes y después.
-  raw: Record<string, unknown>;
+  // `ventas` ya no espeja `raw`. La columna generada `es_duplicado` ahora se calcula
+  // desde la columna real `origen` (migración 23), así que el JSON crudo dejó de ser
+  // necesario — y con él se van los 444 nombres de comprador y 30 `stripe_customer`
+  // que `anon` podía leer.
+  // `origen` NO se escribe desde acá a propósito: las filas del sync no tienen origen,
+  // y las de backfill (nocodb_id 900001+) están fuera del alcance de este upsert.
+  // Mandarla como null borraría la procedencia de 982 filas ante una colisión de IDs.
   synced_at: string;
 }
 
@@ -77,7 +76,6 @@ function normalize(
     sales_cycle_days: toNumber(row['Sales_Cycle_Days']),
     // El dashboard lo usaba leyéndolo de `raw`; ahora es columna propia.
     tipo_oferta: toText(row['Tipo de Oferta']),
-    raw: cleanRaw(row, ['Usuario Vendedora', 'email']),
     synced_at: new Date().toISOString(),
   };
 }
