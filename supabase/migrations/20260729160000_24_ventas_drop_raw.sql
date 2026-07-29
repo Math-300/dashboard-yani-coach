@@ -7,7 +7,18 @@
 --
 -- Qué se va con la columna: los 444 nombres de comprador y los 30 `stripe_customer`
 -- que `anon` podía leer con la key que viaja en el bundle del navegador.
--- El JSON crudo sigue existiendo en NocoDB, que es su lugar. El espejo es una caché
--- de lectura para el dashboard, y el dashboard nunca leyó `raw` (grep en src/ = 0).
+-- El espejo es una caché de lectura para el dashboard, y ningún lector del repo pide
+-- `raw` (verificado en components/, services/, api/ y scripts/).
+--
+-- CORRECCIÓN post-aplicación (revisión final del 2026-07-29): el comentario original
+-- decía "el JSON crudo sigue existiendo en NocoDB, que es su lugar". Eso vale para las
+-- 884 filas que vienen del sync, pero es FALSO para las 1.055 de backfill (origen
+-- systeme_csv_backfill / stripe_recovery_*), que nunca existieron en NocoDB. Su `raw`
+-- llevaba identificadores de negocio que no están en ninguna otra parte:
+--   - 982 filas: `invoice` (nº de factura Systeme, llave de idempotencia) + `csv_product_name`
+--   - 43 filas: `Stripe Charge ID` + `PricePlan ID`
+--   - 30 filas: `charge_id`
+-- Antes de borrar el snapshot `_refactor_ventas_baseline` hay que preservarlos o
+-- aceptar la pérdida por escrito. No son datos personales: son trazabilidad.
 
 alter table public.ventas drop column raw;

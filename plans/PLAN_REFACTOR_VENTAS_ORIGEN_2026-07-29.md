@@ -68,9 +68,29 @@ END
 
 **Quién lee y quién escribe `raw`:**
 
-- Escritores: **solo** `scripts/sync/syncVentas.ts:80`.
-- Lectores en el front (`src/`): **cero**. `grep -rn "\braw\b" src/` no devuelve nada.
+- Escritores de `raw`: **solo** `scripts/sync/syncVentas.ts:80`. *(Corregido tras la revisión
+  final: `resolve_foreign_keys()` también escribe en `ventas`, pero solo `contacto_id` y
+  `vendedora_id`. Y hubo tres cargas manuales fuera del repo — CSV y dos recuperaciones
+  Stripe — que sí escribieron `raw`. Ver el hallazgo sobre identificadores más abajo.)*
+- Lectores en el front: **cero**, verificado en `components/`, `services/` y `api/`.
+  *(Corregido: `src/` en este repo solo tiene CSS, así que un grep ahí no probaba nada.
+  `services/dataSource.ts` leía `ventas.raw['Tipo de Oferta']` hasta el 28-jul; hoy los
+  tres `.from('ventas')` piden columnas explícitas.)*
 - Otros lectores de `ventas`: `scripts/smoke_datasource.ts:78` (solo `nocodb_id, amount, fecha`).
+
+**Hallazgo de la revisión final — `raw` NO era redundante para 1.055 filas.** La premisa
+"el JSON crudo sigue existiendo en NocoDB" vale para las 884 filas del sync, pero es
+**falsa** para las 1.055 de backfill, que nunca existieron en NocoDB. Medido en el snapshot:
+
+| `origen` | Filas | Identificadores que solo estaban en `raw` |
+|---|---|---|
+| `systeme_csv_backfill` | 982 | `invoice` (982) + `csv_product_name` (982) |
+| `stripe_recovery_junio` | 43 | `Stripe Charge ID` (43) + `PricePlan ID` (43) |
+| `stripe_recovery_julio_2026-07-13` | 30 | `charge_id` (30) |
+
+No son datos personales: son identificadores de negocio, y el `.brain` los declara como
+la llave para cruzar contra Stripe ante un doble conteo. Hoy sobreviven **únicamente** en
+`_refactor_ventas_baseline`. Esto es lo que bloquea la Task 6.
 
 **Exposición que este refactor cierra** — `anon` tiene `SELECT` sobre la columna `raw` y la policy le deja ver las 1.515 filas netas:
 
@@ -103,7 +123,7 @@ Sin esto no hay rollback: una vez dropeado `raw`, el contenido no vuelve. El sna
 **Interfaces:**
 - Produce: tabla `public._refactor_ventas_baseline (id uuid, nocodb_id int, es_duplicado bool, amount numeric, fecha timestamptz, origen text, raw jsonb)` — la consumen las verificaciones de las Tareas 2, 4 y 5.
 
-- [ ] **Paso 1: Crear el snapshot y blindarlo**
+- [x] **Paso 1: Crear el snapshot y blindarlo**
 
 ```sql
 create table public._refactor_ventas_baseline as
@@ -116,7 +136,7 @@ revoke all on public._refactor_ventas_baseline from anon, authenticated;
 
 `enable row level security` sin políticas = nadie salvo `service_role` lee, aunque un GRANT por defecto se cuele. Doble candado a propósito: esta tabla tiene los 444 nombres.
 
-- [ ] **Paso 2: Verificar que el snapshot está completo y cerrado**
+- [x] **Paso 2: Verificar que el snapshot está completo y cerrado**
 
 ```sql
 select (select count(*) from public._refactor_ventas_baseline) as filas_snapshot,
@@ -127,7 +147,7 @@ select (select count(*) from public._refactor_ventas_baseline) as filas_snapshot
 
 Esperado: `filas_snapshot = filas_ventas`, `grants_publicos = 0`.
 
-- [ ] **Paso 3: Registrar la línea base**
+- [x] **Paso 3: Registrar la línea base**
 
 ```sql
 select count(*) as total,
@@ -150,7 +170,7 @@ Anotar los cuatro números en la sección "Bitácora" al final de este archivo. 
 - Consume: `public._refactor_ventas_baseline` (Task 1).
 - Produce: `public.ventas.origen text` y `es_duplicado` recalculada desde `origen`. La Task 3 depende de que `origen` ya exista; la Task 4 depende de que `es_duplicado` ya no referencie `raw`.
 
-- [ ] **Paso 1: Escribir la migración**
+- [x] **Paso 1: Escribir la migración**
 
 ```sql
 -- Migración 23 (2026-07-29): promover `origen` a columna real en `ventas`.
@@ -193,13 +213,13 @@ comment on column public.ventas.origen is
   'Procedencia de la fila: NULL = sync NocoDB; systeme_csv_backfill / stripe_recovery_* = cargas puntuales. Alimenta la columna generada es_duplicado. Antes vivía en raw->>''origen''.';
 ```
 
-- [ ] **Paso 2: Aplicarla**
+- [x] **Paso 2: Aplicarla**
 
 Vía `mcp__supabase__apply_migration`, nombre `23_ventas_origen_columna`.
 
 Si `SET EXPRESSION` falla (sintaxis no soportada), ir al **Plan B** al final de esta tarea. No improvisar.
 
-- [ ] **Paso 3: Verificar el invariante — 0 filas cambiadas**
+- [x] **Paso 3: Verificar el invariante — 0 filas cambiadas**
 
 ```sql
 select count(*) as filas_que_cambiaron
@@ -210,7 +230,7 @@ where v.es_duplicado is distinct from b.es_duplicado;
 
 Esperado: **0**. Cualquier otro número aborta el refactor y dispara el rollback de esta tarea.
 
-- [ ] **Paso 4: Verificar backfill, totales y la expresión nueva**
+- [x] **Paso 4: Verificar backfill, totales y la expresión nueva**
 
 ```sql
 select (select count(*) from public.ventas v join public._refactor_ventas_baseline b using (id)
@@ -223,7 +243,7 @@ select (select count(*) from public.ventas v join public._refactor_ventas_baseli
 
 Esperado: `origen_mal_backfilleado = 0`; `con_origen = 1055` (o el valor de la línea base); `ingreso_neto` idéntico al de la Bitácora; `expresion` menciona `origen` y **no** menciona `raw`.
 
-- [ ] **Paso 5: Refrescar matviews y confirmar que no se movieron**
+- [x] **Paso 5: Refrescar matviews y confirmar que no se movieron**
 
 ```sql
 select public.refresh_materialized_views();
@@ -233,7 +253,7 @@ from public.mv_sales_trend_monthly;
 
 Anotar en la Bitácora. Se vuelve a medir en la Task 5.
 
-- [ ] **Paso 6: Commit**
+- [x] **Paso 6: Commit**
 
 ```bash
 git add supabase/migrations/20260729140000_23_ventas_origen_columna.sql
@@ -272,7 +292,7 @@ alter table public.ventas drop column if exists origen;
 
 **Decisión de diseño — el sync NO escribe `origen`:** las 884 filas que sincroniza no tienen origen (es NULL y así debe quedar), y las 1.055 de backfill viven en el rango de IDs 900001+, que el upsert nunca alcanza. Al no mandar la columna, el `ON CONFLICT DO UPDATE` no la toca jamás. Si en cambio mandáramos `origen: null`, una futura colisión de IDs borraría la procedencia de 982 filas y reclasificaría la facturación de feb–may. No mandarla es la opción segura.
 
-- [ ] **Paso 1: Quitar `raw` de la interfaz**
+- [x] **Paso 1: Quitar `raw` de la interfaz**
 
 En `scripts/sync/syncVentas.ts`, reemplazar el bloque de las líneas 21-28 (el comentario largo + `raw: Record<string, unknown>;`) por:
 
@@ -286,7 +306,7 @@ En `scripts/sync/syncVentas.ts`, reemplazar el bloque de las líneas 21-28 (el c
   // Mandarla como null borraría la procedencia de 982 filas ante una colisión de IDs.
 ```
 
-- [ ] **Paso 2: Quitar la asignación y el import**
+- [x] **Paso 2: Quitar la asignación y el import**
 
 Línea 80, borrar entera:
 
@@ -302,7 +322,7 @@ import { chunk, toIsoDate, toNumber, toText } from './helpers.js';
 
 `cleanRaw` queda sin usuarios en todo `scripts/`. Se conserva exportada en `helpers.ts` — es utilitario genérico y borrarlo no aporta nada.
 
-- [ ] **Paso 3: Typecheck y tests**
+- [x] **Paso 3: Typecheck y tests**
 
 ```bash
 cd "/home/jruiz300/Dev/PROYECTOS/Yani Coach/Dashboard Yani Coach"
@@ -312,7 +332,7 @@ npx tsx --test scripts/sync/scheduler.test.ts scripts/sync/respondio.test.ts scr
 
 Esperado: typecheck sin salida (exit 0); tests `# fail 0`.
 
-- [ ] **Paso 4: Confirmar que no quedó ningún escritor de `raw` en ventas**
+- [x] **Paso 4: Confirmar que no quedó ningún escritor de `raw` en ventas**
 
 ```bash
 grep -rn "cleanRaw\|\braw:" scripts/sync/*.ts
@@ -320,7 +340,7 @@ grep -rn "cleanRaw\|\braw:" scripts/sync/*.ts
 
 Esperado: solo la definición en `helpers.ts`. Ninguna referencia en `syncVentas.ts`.
 
-- [ ] **Paso 5: Commit**
+- [x] **Paso 5: Commit**
 
 ```bash
 git add scripts/sync/syncVentas.ts
@@ -336,7 +356,7 @@ El DROP de la Task 5 depende de que **producción** ya corra este código. Verif
 **Files:**
 - Ninguno. Deploy sobre VPS `154.38.179.209`, servicio Swarm `yani-dashboard_yani_dashboard_sync` (imagen `yani-dashboard-sync:local`).
 
-- [ ] **Paso 1: Llevar el código al VPS**
+- [x] **Paso 1: Llevar el código al VPS**
 
 ```bash
 ssh root@154.38.179.209 'cd /opt/dashboard-yani-coach && git fetch origin && git status --short | head'
@@ -344,7 +364,7 @@ ssh root@154.38.179.209 'cd /opt/dashboard-yani-coach && git fetch origin && git
 
 El árbol del VPS está sucio sobre `4ce1f68` (deuda conocida). Antes de tirar de `origin`, comparar los archivos que importan y decidir; **no** hacer `git checkout -f` a ciegas: `.env.build` / `.env.deploy` / `.env.sync` viven ahí sin trackear y tienen los tokens.
 
-- [ ] **Paso 2: Rebuild y force-update**
+- [x] **Paso 2: Rebuild y force-update**
 
 Con tag `:local`, `stack deploy` **no** toma la imagen nueva — hay que forzar:
 
@@ -354,7 +374,7 @@ ssh root@154.38.179.209 'cd /opt/dashboard-yani-coach && \
   docker service update --force --image yani-dashboard-sync:local yani-dashboard_yani_dashboard_sync'
 ```
 
-- [ ] **Paso 3: Confirmar que el contenedor levantó**
+- [x] **Paso 3: Confirmar que el contenedor levantó**
 
 ```bash
 ssh root@154.38.179.209 'docker service ps yani-dashboard_yani_dashboard_sync --no-trunc --format "{{.Name}}\t{{.CurrentState}}\t{{.Error}}" | head -3'
@@ -362,7 +382,7 @@ ssh root@154.38.179.209 'docker service ps yani-dashboard_yani_dashboard_sync --
 
 Esperado: la tarea más nueva en `Running`, sin error.
 
-- [ ] **Paso 4: Disparar un sync a mano y ver el resultado**
+- [x] **Paso 4: Disparar un sync a mano y ver el resultado**
 
 El servicio solo escucha en la overlay interna, así que se dispara desde adentro del contenedor:
 
@@ -375,7 +395,7 @@ La imagen del sync **no trae `curl`** (verificado al ejecutar: `sh: curl: not fo
 
 Esperado: JSON con `"ok":true`. Si devuelve 409, hay un sync en curso: esperar y reintentar.
 
-- [ ] **Paso 5: Verificar en la base que la corrida entró y no rompió nada**
+- [x] **Paso 5: Verificar en la base que la corrida entró y no rompió nada**
 
 ```sql
 select status, rows_inserted, rows_updated, rows_failed, error, finished_at
@@ -384,7 +404,7 @@ from public.sync_runs where table_name='ventas' order by started_at desc limit 3
 
 Esperado: última corrida `status = 'ok'`, `rows_failed = 0`, `error` nulo.
 
-- [ ] **Paso 6: Re-verificar el invariante después de que producción escribió**
+- [x] **Paso 6: Re-verificar el invariante después de que producción escribió**
 
 ```sql
 select (select count(*) from public.ventas v join public._refactor_ventas_baseline b using (id)
@@ -408,7 +428,7 @@ Esperado: `filas_que_cambiaron = 0`; `con_origen` sin cambios (el sync no lo toc
 - Consume: Tasks 2, 3 y 4 completas y verificadas.
 - Produce: `ventas` sin `raw`. Irreversible una vez borrado el snapshot (Task 6).
 
-- [ ] **Paso 1: Confirmar que nada depende ya de `raw`**
+- [x] **Paso 1: Confirmar que nada depende ya de `raw`**
 
 ```sql
 select distinct dependente.relname as objeto_dependiente, dependente.relkind
@@ -421,7 +441,7 @@ where origen.relname = 'ventas' and a.attname = 'raw';
 
 Esperado: **0 filas**. Si aparece algo, parar y resolver esa dependencia primero.
 
-- [ ] **Paso 2: Escribir la migración**
+- [x] **Paso 2: Escribir la migración**
 
 ```sql
 -- Migración 24 (2026-07-29): dropear `ventas.raw`.
@@ -439,11 +459,11 @@ Esperado: **0 filas**. Si aparece algo, parar y resolver esa dependencia primero
 alter table public.ventas drop column raw;
 ```
 
-- [ ] **Paso 3: Aplicarla**
+- [x] **Paso 3: Aplicarla**
 
 Vía `mcp__supabase__apply_migration`, nombre `24_ventas_drop_raw`.
 
-- [ ] **Paso 4: Verificación final — cierre y totales**
+- [x] **Paso 4: Verificación final — cierre y totales**
 
 ```sql
 select (select count(*) from information_schema.columns
@@ -457,7 +477,7 @@ select (select count(*) from information_schema.columns
 
 Esperado: `raw_existe = 0`; `filas_que_cambiaron = 0`; `total`, `duplicadas` e `ingreso_neto` coincidiendo con la Bitácora (más las ventas nuevas explicadas en la Task 4).
 
-- [ ] **Paso 5: Verificar la exposición desde el rol `anon`**
+- [x] **Paso 5: Verificar la exposición desde el rol `anon`**
 
 Simular al anónimo de verdad, no deducirlo del catálogo:
 
@@ -476,7 +496,7 @@ select * from _chk;
 
 Esperado: `filas_ventas_visibles_anon` = las netas (1.515 en la línea base). Que siga viendo las filas es correcto — el dashboard las necesita. Lo que cambió es que ya no vienen con el JSON adentro.
 
-- [ ] **Paso 6: Refrescar matviews y comparar contra la Task 2**
+- [x] **Paso 6: Refrescar matviews y comparar contra la Task 2**
 
 ```sql
 select public.refresh_materialized_views();
@@ -486,7 +506,7 @@ from public.mv_sales_trend_monthly;
 
 Esperado: idéntico a lo anotado en el Paso 5 de la Task 2.
 
-- [ ] **Paso 7: Commit**
+- [x] **Paso 7: Commit**
 
 ```bash
 git add supabase/migrations/20260729160000_24_ventas_drop_raw.sql
@@ -548,15 +568,20 @@ Se completa al ejecutar. Los valores medidos mandan sobre los escritos en este p
 
 | Momento | Total | Dup. | Ingreso neto | Ingreso bruto | `filas_que_cambiaron` |
 |---|---|---|---|---|---|
-| Línea base (Task 1) | | | | | — |
-| Post migración 23 (Task 2) | | | | | |
-| Post corrida real (Task 4) | | | | | |
-| Post DROP (Task 5) | | | | | |
+| Línea base (Task 1) | 1.939 | 424 | 109.374,00 | 126.721,00 | — |
+| Post migración 23 (Task 2) | 1.939 | 424 | 109.374,00 | 126.721,00 | **0** |
+| Post corrida real (Task 4) | 1.939 | 424 | 109.374,00 | — | **0** |
+| Post DROP (Task 5) | 1.939 | 424 | 109.374,00 | 126.721,00 | **0** |
 
 | Momento | `mv_sales_trend_monthly` monto | cantidad |
 |---|---|---|
-| Task 2 Paso 5 | | |
-| Task 5 Paso 6 | | |
+| Task 2 Paso 5 | 109.374,00 | 1.515 |
+| Task 5 Paso 6 | 109.374,00 | 1.515 |
+
+Otras mediciones: `origen` backfilleado en 1.055 filas, sin una sola discrepancia contra
+el snapshot, en las tres etapas. Tras la corrida real de producción, `origen_pisado = 0`
+— el sync actualizó 884 filas y no tocó la columna, que era la apuesta del diseño.
+Rol `anon` simulado post-DROP: 1.515 filas visibles, las mismas que antes.
 
 ---
 
