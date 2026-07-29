@@ -412,7 +412,12 @@ async function getKpiCounts(dateRange?: DateRange | null): Promise<KpiCounts> {
     (async () => {
       let q = supabase
         .from('ventas')
-        .select('*', { count: 'exact', head: true })
+        // 'id' en vez de '*': con head:true el conteo viene del header Prefer, no de
+        // la lista de columnas — pero PostgREST igual expande '*' a SELECT de todas
+        // las columnas de la tabla, y el grant de la migración 25 es por columna
+        // (sin `referencia_externa`). Pedir '*' aquí dispara 403 en cuanto esa
+        // migración se aplique.
+        .select('id', { count: 'exact', head: true })
         .eq('tenant_id', TENANT_ID);
       if (range) q = q.gte('fecha', range.start).lte('fecha', range.end);
       const { count, error } = await q;

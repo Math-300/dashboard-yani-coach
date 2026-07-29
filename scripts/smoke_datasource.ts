@@ -80,6 +80,16 @@ async function main() {
     return { count: data?.length, total: (data ?? []).reduce((s: number, r: any) => s + Number(r.amount || 0), 0) };
   })();
 
+  await t('ventas COUNT exact (head:id)', async () => {
+    // Regresión: el grant de la migración 25 es por columna (sin `referencia_externa`),
+    // así que un `select('*', ...)` sobre ventas tira 403 aunque sea head:true. Este
+    // check pega exactamente el mismo camino que services/dataSource.ts getKpiCounts
+    // para que la regresión salte acá y no en producción.
+    const { count, error } = await sb.from('ventas').select('id', { count: 'exact', head: true }).eq('tenant_id', TENANT_ID);
+    if (error) throw error;
+    return { count };
+  })();
+
   await t('intentos_compra COUNT', async () => {
     const { count, error } = await sb.from('intentos_compra').select('*', { count: 'exact', head: true }).eq('tenant_id', TENANT_ID);
     if (error) throw error;
