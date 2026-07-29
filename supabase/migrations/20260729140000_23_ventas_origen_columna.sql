@@ -36,3 +36,33 @@ create index if not exists ventas_origen_idx on public.ventas (origen);
 
 comment on column public.ventas.origen is
   'Procedencia de la fila: NULL = sync NocoDB; systeme_csv_backfill / stripe_recovery_* = cargas puntuales. Alimenta la columna generada es_duplicado. Antes vivía en raw->>''origen''.';
+
+-- Límites conocidos de esta migración (documentado en revisión, 2026-07-29):
+--
+-- 1) NO es reproducible desde cero. Las columnas `es_duplicado` (GENERATED) y
+--    `tipo_oferta` de `public.ventas` no están definidas en NINGUNA migración de este
+--    repo — se crearon a mano directamente en producción, antes de que existiera este
+--    historial de migraciones. Si alguien corre `supabase db reset` o levanta un
+--    preview branch desde cero, esta migración (23) va a fallar en el paso 3
+--    (`alter column es_duplicado set expression as (...)`) con el error:
+--      ERROR:  column "es_duplicado" of relation "ventas" does not exist
+--    porque en una base fresca `ventas` nunca llega a tener esa columna. Para
+--    reproducir el esquema completo desde cero hoy hace falta, además de este
+--    historial de migraciones, un dump manual del esquema real de producción
+--    (`es_duplicado`, `tipo_oferta` y cualquier otra columna creada fuera de este
+--    directorio). Ese dump no existe todavía — queda como deuda a resolver antes de
+--    confiar en `db reset` / branches nuevos para este proyecto.
+--
+-- 2) DEJA de ser re-ejecutable (replay) una vez que una migración posterior
+--    (la 24, que dropea `raw`) se aplique. Hoy este archivo es idempotente porque
+--    usa `add column if not exists` y `create index if not exists`, pero el paso 2
+--    (`update public.ventas set origen = raw->>'origen' where raw ? 'origen';`) asume
+--    que la columna `raw` todavía existe. Después de que `raw` se dropee, replayear
+--    esta migración 23 en esa misma base (por ejemplo al reconstruir el historial
+--    completo de migraciones desde cero en una base que ya pasó por la 24, o en
+--    cualquier escenario que aplique las migraciones en un orden no lineal) falla en
+--    ese `update` con:
+--      ERROR:  column "raw" does not exist
+--    Quien reconstruya el esquema completo desde el archivo de migraciones en orden
+--    (23 antes de 24) no lo sufre; el riesgo es específico a reproducir SOLO esta
+--    migración de forma aislada, o a un replay parcial que se salte la 24.
