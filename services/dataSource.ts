@@ -362,71 +362,21 @@ async function getInteractionCounts(dateRange?: DateRange | null): Promise<Recor
 }
 
 async function getKpiCounts(dateRange?: DateRange | null): Promise<KpiCounts> {
-  // Conteos simples con HEAD requests (count: exact)
-  const range = dateRange
-    ? { start: dateRange.start.toISOString(), end: dateRange.end.toISOString() }
-    : null;
-
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const todayStartISO = todayStart.toISOString();
-
-  const [leadsCreated, newLeads, urgentFollowUps, salesCount] = await Promise.all([
-    // leads creados en el rango
-    (async () => {
-      let q = supabase
-        .from('contactos')
-        .select('*', { count: 'exact', head: true })
-        .eq('tenant_id', TENANT_ID);
-      if (range) q = q.gte('nocodb_created_at', range.start).lte('nocodb_created_at', range.end);
-      const { count, error } = await q;
-      if (error) throw error;
-      return count ?? 0;
-    })(),
-    // leads nuevos (estado Nuevo) en el rango
-    (async () => {
-      let q = supabase
-        .from('contactos')
-        .select('*', { count: 'exact', head: true })
-        .eq('tenant_id', TENANT_ID)
-        .eq('estado_simplificado', 'Nuevo');
-      if (range) q = q.gte('nocodb_created_at', range.start).lte('nocodb_created_at', range.end);
-      const { count, error } = await q;
-      if (error) throw error;
-      return count ?? 0;
-    })(),
-    // seguimientos urgentes: próximo contacto < hoy y estado no cerrado
-    (async () => {
-      const nowISO = new Date().toISOString();
-      const { count, error } = await supabase
-        .from('contactos')
-        .select('*', { count: 'exact', head: true })
-        .eq('tenant_id', TENANT_ID)
-        .not('estado_simplificado', 'in', '(Venta Cerrada,Venta Perdida)')
-        .lt('proximo_contacto', nowISO)
-        .not('proximo_contacto', 'is', null);
-      if (error) throw error;
-      return count ?? 0;
-    })(),
-    // ventas en el rango
-    (async () => {
-      let q = supabase
-        .from('ventas')
-        // 'id' en vez de '*': con head:true el conteo viene del header Prefer, no de
-        // la lista de columnas — pero PostgREST igual expande '*' a SELECT de todas
-        // las columnas de la tabla, y el grant de la migración 25 es por columna
-        // (sin `referencia_externa`). Pedir '*' aquí dispara 403 en cuanto esa
-        // migración se aplique.
-        .select('id', { count: 'exact', head: true })
-        .eq('tenant_id', TENANT_ID);
-      if (range) q = q.gte('fecha', range.start).lte('fecha', range.end);
-      const { count, error } = await q;
-      if (error) throw error;
-      return count ?? 0;
-    })(),
-  ]);
-
-  return { leadsCreated, newLeads, urgentFollowUps, salesCount };
+  // RPC SECURITY DEFINER (migración 29) — un solo agregado server-side, sin
+  // select('*') sobre contactos (sobrevive al revoke de columnas a anon).
+  const { data, error } = await supabase.rpc('get_kpi_counts', {
+    p_tenant_id: TENANT_ID,
+    p_start: dateRange?.start.toISOString() ?? null,
+    p_end: dateRange?.end.toISOString() ?? null,
+  });
+  if (error) throw error;
+  const r = (data as any[])?.[0] ?? {};
+  return {
+    leadsCreated: Number(r.leads_created ?? 0),
+    newLeads: Number(r.new_leads ?? 0),
+    urgentFollowUps: Number(r.urgent_follow_ups ?? 0),
+    salesCount: Number(r.sales_count ?? 0),
+  };
 }
 
 // ============================================================================
