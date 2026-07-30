@@ -15,9 +15,7 @@ import {
   buildCookie, buildClearCookie, parseCookies, sign, timingSafeEqualStr,
 } from '../../api/auth/core.js';
 import { requireSession } from './requireSession.js';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- se usan en Task 4 (endpoints de datos);
-// el import ya alcanza para inicializar el cliente y fallar fuerte al boot si falta config.
-import { supabaseService, TENANT_ID as SVC_TENANT } from './supabaseService.js';
+import { metricsRouter } from './metricsRoutes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../../');
@@ -80,12 +78,11 @@ app.post('/api/auth/logout', (_req, res) => {
   return res.status(200).json({ success: true });
 });
 
-// Ruta de humo gated por sesión (Task 3). Los endpoints de datos reales
-// (que sí consultan supabaseService) llegan en Task 4 — acá solo se prueba
-// que el guard corta sin cookie y deja pasar con una sesión válida.
-app.get('/api/metrics/health', requireSession, (_req, res) => {
-  res.json({ ok: true });
-});
+// Endpoints de datos (Task 4): mismas filas que dataSource.ts, leídas con
+// service_role, gated por requireSession — único guard, no hay otra defensa
+// (ver comentario en metricsRoutes.ts sobre /product-buyers). Incluye
+// /api/metrics/health (la ruta de humo de Task 3, ahora dentro del router).
+app.use('/api/metrics', requireSession, metricsRouter);
 
 // Estáticos + fallback SPA (toda ruta que no empiece con /api/ devuelve index.html)
 app.use(express.static(DIST));
