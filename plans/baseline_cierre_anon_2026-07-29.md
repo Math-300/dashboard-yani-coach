@@ -37,13 +37,32 @@ select * from get_funnel_respondio('7558d73a-e97b-4422-ab5c-db87f6626592'::uuid,
 
 ### (b) Mes 2026-07
 
+**Corrección (fix round 1, 2026-07-30):** el `p_end` original usaba `'2026-07-31'::timestamptz`,
+que es medianoche del 31 (00:00:00Z) — con el `<= p_end` de la función eso EXCLUYE todo
+el 31 de julio desde las 00:00:01 en adelante. Los Steps 2–4 sí usan el límite superior
+inclusivo `'2026-07-31T23:59:59.999Z'` (igual que el front, que arma el fin de rango con
+`.setHours(23,59,59,999)`). Se corrigió Step 1 para usar el mismo límite, así el mes
+queda consistente en todo el documento.
+
 ```sql
-select * from get_funnel_respondio('7558d73a-e97b-4422-ab5c-db87f6626592'::uuid, '2026-07-01'::timestamptz, '2026-07-31'::timestamptz);
+select * from get_funnel_respondio('7558d73a-e97b-4422-ab5c-db87f6626592'::uuid, '2026-07-01T00:00:00.000Z'::timestamptz, '2026-07-31T23:59:59.999Z'::timestamptz);
 ```
 
 | leads_nuevos | primer_mensaje | respondieron | interesados | agendo | venta_cerrada | venta_cerrada_monto | venta_perdida | tiempo_resp_mediana_min |
 |---|---|---|---|---|---|---|---|---|
-| 800 | 621 | 377 | 19 | 14 | 347 | 23876 | 28 | 95.6 |
+| 800 | 624 | 381 | 19 | 14 | 347 | 23876 | 28 | 95.6 |
+
+> **Nota de transparencia:** este valor corregido (624/381) difiere del que había quedado
+> pegado antes de la corrección (621/377) — pero NO por el cambio de boundary. Se probó
+> corriendo el boundary viejo (`'2026-07-31'::timestamptz`) y el nuevo
+> (`'2026-07-31T23:59:59.999Z'`) **en la misma consulta, en el mismo instante**: los dos
+> dieron exactamente 624/381/19/14/347/23876/28/95.6 — idénticos. Confirma que hoy
+> (`now()` = 2026-07-30 ~20:50 UTC, todavía antes del 31 de julio) el fix es un no-op tal
+> como se esperaba, porque no existen filas con fecha 31-jul (es futuro). La diferencia
+> 621→624 / 377→381 fue drift real de producción entre las dos mediciones originales
+> (~8 minutos aparte, sistema en vivo) — no un efecto del boundary. Session timezone
+> verificada como `UTC` (`current_setting('TIMEZONE')`), así que `'2026-07-01'::timestamptz`
+> y `'2026-07-01T00:00:00.000Z'` son el mismo instante; el único cambio real es el `p_end`.
 
 ---
 
@@ -255,6 +274,13 @@ order by vendedora_nocodb_id;
 capadas. Las 380 con `vendedora_nocodb_id IS NULL` no matchean ningún `seller.id` en
 `EquipoView`, así que hoy no se suman a ninguna fila de vendedora — quedan invisibles
 en el tablero pero están en el array.)
+
+> **Nota menor:** la clasificación SQL usa `COALESCE(medio_canal, tipo, '')`, mientras
+> que `toInteractionType` en el código usa `medio || tipo || ''` (OR lógico de JS, no
+> coalesce de SQL). Ambos son equivalentes salvo si `medio_canal` es **string vacío**
+> (no `NULL`) — en JS `'' || tipo` cae a `tipo`, pero `COALESCE('', tipo, '')` se queda
+> en `''`. No se remidió para confirmar si ese caso ocurre en los datos; queda anotado
+> para quien re-audite el cap de interacciones.
 
 > ⚠️ **Confirmación del cap:** julio tiene 6511 interacciones reales pero la UI de hoy
 > solo ve las 1000 más recientes. El breakdown por vendedora arriba refleja **lo que
