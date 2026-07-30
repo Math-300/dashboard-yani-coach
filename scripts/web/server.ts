@@ -1,8 +1,10 @@
 /**
  * Servidor web de producción: sirve el bundle Vite (dist/) como SPA y expone
  * las rutas de auth por contraseña. Reemplaza a las serverless functions de Vercel.
- * Detrás de Traefik en el VPS. NO recibe service_role — solo anon (horneada en el
- * bundle en build-time) + AUTH_SECRET/AUTH_PASSWORD.
+ * Detrás de Traefik en el VPS. Cambio de postura (Task 3): el server SÍ tiene
+ * ahora un cliente service_role (ver supabaseService.ts) para poder servir filas
+ * de personas, pero todo endpoint que lo use va gated por requireSession
+ * (cookie yd_auth válida) — nunca se expone directo al navegador.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -12,6 +14,10 @@ import {
   COOKIE_NAME, COOKIE_TTL_SECONDS, createSessionToken, verifyToken,
   buildCookie, buildClearCookie, parseCookies, sign, timingSafeEqualStr,
 } from '../../api/auth/core.js';
+import { requireSession } from './requireSession.js';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- se usan en Task 4 (endpoints de datos);
+// el import ya alcanza para inicializar el cliente y fallar fuerte al boot si falta config.
+import { supabaseService, TENANT_ID as SVC_TENANT } from './supabaseService.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../../');
@@ -72,6 +78,13 @@ app.get('/api/auth/session', (req, res) => {
 app.post('/api/auth/logout', (_req, res) => {
   res.setHeader('Set-Cookie', buildClearCookie(IS_PROD));
   return res.status(200).json({ success: true });
+});
+
+// Ruta de humo gated por sesión (Task 3). Los endpoints de datos reales
+// (que sí consultan supabaseService) llegan en Task 4 — acá solo se prueba
+// que el guard corta sin cookie y deja pasar con una sesión válida.
+app.get('/api/metrics/health', requireSession, (_req, res) => {
+  res.json({ ok: true });
 });
 
 // Estáticos + fallback SPA (toda ruta que no empiece con /api/ devuelve index.html)
