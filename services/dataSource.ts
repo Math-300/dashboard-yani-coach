@@ -70,6 +70,29 @@ function requireTenant() {
 }
 
 // ============================================================================
+// Fetch helper — filas de personas vía /api/metrics/* (Task 5)
+//
+// contactos/interacciones/intentos_compra dejaron de leerse con la `anon` key
+// (RLS `USING (true)` exponía teléfono/nombre a cualquiera con el bundle
+// público). Ahora se leen detrás de `requireSession` — la cookie yd_auth
+// viaja sola con `credentials: 'same-origin'`. `getSales`/`getKpiCounts`/
+// `getSellers` siguen en el cliente `supabase` (anon) — fuera de alcance.
+// ============================================================================
+
+async function fetchMetrics<T>(path: string, dateRange?: DateRange | null): Promise<T> {
+  const params = new URLSearchParams();
+  if (dateRange) {
+    params.set('start', dateRange.start.toISOString());
+    params.set('end', dateRange.end.toISOString());
+  }
+  const qs = params.toString();
+  const sep = path.includes('?') ? (qs ? '&' : '') : (qs ? '?' : '');
+  const res = await fetch(`/api/metrics/${path}${sep}${qs}`, { credentials: 'same-origin' });
+  if (!res.ok) throw new Error(`/api/metrics/${path} → ${res.status}`);
+  return res.json() as Promise<T>;
+}
+
+// ============================================================================
 // Sellers
 // ============================================================================
 
@@ -106,38 +129,15 @@ export async function getSellers(): Promise<Seller[]> {
 // Contactos (con filtro de fecha opcional)
 // ============================================================================
 
-const CONTACT_LIMIT = 1000; // espejo del comportamiento actual de noco.ts
+/** Shape cruda de GET /api/metrics/contacts — `status` sin normalizar. */
+type RawContact = Omit<Contact, 'status'> & { status: string | null };
 
 export async function getContacts(dateRange?: DateRange | null): Promise<Contact[]> {
   requireTenant();
-  let q = supabase
-    .from('contactos')
-    .select('nocodb_id, nombre, pais, nocodb_created_at, estado_simplificado, motivo_venta_perdida, vendedora_nocodb_id, estimated_value, lead_age_days, proximo_contacto, etiquetas')
-    .eq('tenant_id', TENANT_ID)
-    .order('nocodb_created_at', { ascending: false })
-    .limit(CONTACT_LIMIT);
-
-  if (dateRange) {
-    q = q
-      .gte('nocodb_created_at', dateRange.start.toISOString())
-      .lte('nocodb_created_at', dateRange.end.toISOString());
-  }
-
-  const { data, error } = await q;
-  if (error) throw error;
-
-  return (data ?? []).map((c) => ({
-    id: String(c.nocodb_id),
-    name: c.nombre || 'Lead Sin Nombre',
-    country: c.pais || 'Desconocido',
-    createdAt: c.nocodb_created_at || new Date().toISOString(),
-    status: toLeadStatus(c.estado_simplificado),
-    lostReasonDetail: c.motivo_venta_perdida || undefined,
-    assignedSellerId: c.vendedora_nocodb_id != null ? String(c.vendedora_nocodb_id) : '',
-    estimatedValue: c.estimated_value != null ? Number(c.estimated_value) : undefined,
-    leadAgeDays: c.lead_age_days != null ? Number(c.lead_age_days) : undefined,
-    nextContactDate: c.proximo_contacto || undefined,
-    leadSource: Array.isArray(c.etiquetas) && c.etiquetas.length > 0 ? c.etiquetas[0] : undefined,
+  const raw = await fetchMetrics<RawContact[]>('contacts', dateRange);
+  return raw.map((c) => ({
+    ...c,
+    status: toLeadStatus(c.status),
   }));
 }
 
@@ -145,32 +145,23 @@ export async function getContacts(dateRange?: DateRange | null): Promise<Contact
 // Interacciones
 // ============================================================================
 
-const INTERACTION_LIMIT = 1000;
+/** Shape cruda de GET /api/metrics/interactions — sin `type`, trae medio_canal+tipo. */
+type RawInteraction = Omit<Interaction, 'type'> & {
+  medio_canal: string | null;
+  tipo: string | null;
+};
 
 export async function getInteractions(dateRange?: DateRange | null): Promise<Interaction[]> {
   requireTenant();
-  let q = supabase
-    .from('interacciones')
-    .select('nocodb_id, contacto_nocodb_id, vendedora_nocodb_id, tipo, medio_canal, fecha, duracion_segundos, resultado')
-    .eq('tenant_id', TENANT_ID)
-    .order('fecha', { ascending: false })
-    .limit(INTERACTION_LIMIT);
-
-  if (dateRange) {
-    q = q.gte('fecha', dateRange.start.toISOString()).lte('fecha', dateRange.end.toISOString());
-  }
-
-  const { data, error } = await q;
-  if (error) throw error;
-
-  return (data ?? []).map((i) => ({
-    id: String(i.nocodb_id),
-    contactId: i.contacto_nocodb_id != null ? String(i.contacto_nocodb_id) : '',
-    sellerId: i.vendedora_nocodb_id != null ? String(i.vendedora_nocodb_id) : '',
+  const raw = await fetchMetrics<RawInteraction[]>('interactions', dateRange);
+  return raw.map((i) => ({
+    id: i.id,
+    contactId: i.contactId,
+    sellerId: i.sellerId,
     type: toInteractionType(i.medio_canal, i.tipo),
-    date: i.fecha || new Date().toISOString(),
-    durationSeconds: i.duracion_segundos || 0,
-    result: i.resultado || '',
+    date: i.date,
+    durationSeconds: i.durationSeconds,
+    result: i.result,
   }));
 }
 
@@ -224,87 +215,31 @@ export interface ProductBuyer {
 
 /**
  * Lista de clientas que compraron un producto dado (para el panel de detalle).
- * Deduplica con `es_duplicado=false` (mismo criterio que el resto del dashboard)
- * y resuelve nombres de clienta y vendedora.
+ * El endpoint ya resuelve dedup (`es_duplicado`) y nombres de clienta/vendedora
+ * server-side con `service_role` — acá solo se arma la querystring y se
+ * devuelve tal cual, sin normalizador (no hay enum que mapear).
  */
 export async function getProductBuyers(
   producto: string,
   dateRange?: DateRange | null,
 ): Promise<ProductBuyer[]> {
   requireTenant();
-  let q = supabase
-    .from('ventas')
-    .select('contacto_nocodb_id, vendedora_nocodb_id, amount, fecha, payment_status')
-    .eq('tenant_id', TENANT_ID)
-    .eq('producto', producto)
-    .not('es_duplicado', 'is', true) // dedup idéntico a getSales (mantiene false y null)
-    .order('fecha', { ascending: false })
-    .limit(500);
-
-  if (dateRange) {
-    q = q.gte('fecha', dateRange.start.toISOString()).lte('fecha', dateRange.end.toISOString());
-  }
-
-  const { data, error } = await q;
-  if (error) throw error;
-  const rows = data ?? [];
-
-  // Nombres de clienta (una query por el set de ids).
-  const contactIds = [...new Set(rows.map((r) => r.contacto_nocodb_id).filter((x): x is number => x != null))];
-  const contactName = new Map<number, string>();
-  if (contactIds.length > 0) {
-    const { data: cs, error: cErr } = await supabase
-      .from('contactos')
-      .select('nocodb_id, nombre')
-      .eq('tenant_id', TENANT_ID)
-      .in('nocodb_id', contactIds);
-    if (cErr) throw cErr;
-    for (const c of cs ?? []) contactName.set(c.nocodb_id, c.nombre || 'Sin nombre');
-  }
-
-  // Nombres de vendedora (reusa el rollup existente).
-  const sellers = await getSellers();
-  const sellerName = new Map<string, string>(sellers.map((s) => [s.id, s.name]));
-
-  return rows.map((r) => ({
-    contactName: r.contacto_nocodb_id != null ? contactName.get(r.contacto_nocodb_id) ?? 'Sin nombre' : 'Sin nombre',
-    sellerName: r.vendedora_nocodb_id != null ? sellerName.get(String(r.vendedora_nocodb_id)) ?? null : null,
-    amount: Number(r.amount || 0),
-    date: r.fecha,
-    paymentStatus: r.payment_status ?? null,
-  }));
+  return fetchMetrics<ProductBuyer[]>(`product-buyers?producto=${encodeURIComponent(producto)}`, dateRange);
 }
 
 // ============================================================================
 // Intentos de Compra
 // ============================================================================
 
-const ATTEMPTS_LIMIT = 1000;
+/** Shape cruda de GET /api/metrics/attempts — `status` sin normalizar. */
+type RawAttempt = Omit<PurchaseAttempt, 'status'> & { status: string | null };
 
 export async function getAttempts(dateRange?: DateRange | null): Promise<PurchaseAttempt[]> {
   requireTenant();
-  let q = supabase
-    .from('intentos_compra')
-    .select('nocodb_id, contacto_nocodb_id, status, fecha, recovery_seller_nocodb_id, monto_a_recuperar')
-    .eq('tenant_id', TENANT_ID)
-    .order('fecha', { ascending: false })
-    .limit(ATTEMPTS_LIMIT);
-
-  if (dateRange) {
-    q = q.gte('fecha', dateRange.start.toISOString()).lte('fecha', dateRange.end.toISOString());
-  }
-
-  const { data, error } = await q;
-  if (error) throw error;
-
-  return (data ?? []).map((a) => ({
-    id: String(a.nocodb_id),
-    contactId: a.contacto_nocodb_id != null ? String(a.contacto_nocodb_id) : '',
-    amount: Number(a.monto_a_recuperar || 0),
+  const raw = await fetchMetrics<RawAttempt[]>('attempts', dateRange);
+  return raw.map((a) => ({
+    ...a,
     status: toAttemptStatus(a.status),
-    date: a.fecha || new Date().toISOString(),
-    recoverySellerId:
-      a.recovery_seller_nocodb_id != null ? String(a.recovery_seller_nocodb_id) : undefined,
   }));
 }
 
