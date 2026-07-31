@@ -11,6 +11,9 @@
     "typecheck": "tsc --noEmit",
     "validate": "tsx scripts/validate_metrics.ts",
     "test:tz": "tsx scripts/test_noco_tz.ts",
+    "test:auth": "tsx api/auth/core.test.ts",
+    "test:security": "tsx scripts/web/security.test.ts",
+    "test": "npm run test:auth && npm run test:security && npm run typecheck",
     "sync": "tsx scripts/sync/index.ts",
     "web": "tsx scripts/web/server.ts",
     "smoke": "tsx scripts/smoke_datasource.ts"
