@@ -41,20 +41,31 @@ export function createSessionToken(secret: string): string {
 export function verifyToken(
   token: string,
   secret: string,
+  nowMs: number = Date.now(),
 ): { sub?: string; iat?: number; name?: string } | null {
   const parts = token.split('.');
   if (parts.length !== 2) return null;
   const [payloadEncoded, signature] = parts;
   if (!payloadEncoded || !signature) return null;
   if (!timingSafeEqualStr(sign(payloadEncoded, secret), signature)) return null;
+  let payload: { sub?: string; iat?: number; name?: string };
   try {
     const json = Buffer.from(
       payloadEncoded.replace(/-/g, '+').replace(/_/g, '/'), 'base64',
     ).toString();
-    return JSON.parse(json);
+    payload = JSON.parse(json);
   } catch {
     return null;
   }
+  // Caducidad server-side: la firma HMAC sólo prueba autenticidad, no frescura.
+  // Sin este chequeo una cookie capturada valía indefinidamente (el Max-Age de
+  // buildCookie sólo lo respeta el navegador; un token replayado directo lo
+  // ignora). `iat` es Date.now() en ms al firmar. Fail-closed: si falta o no es
+  // numérico, no se puede probar frescura → rechazar.
+  const iat = payload?.iat;
+  if (typeof iat !== 'number' || !Number.isFinite(iat)) return null;
+  if (nowMs - iat > COOKIE_TTL_SECONDS * 1000) return null;
+  return payload;
 }
 
 export function buildCookie(value: string, maxAgeSeconds: number, isProduction: boolean): string {

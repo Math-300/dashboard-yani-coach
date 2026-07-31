@@ -4,9 +4,16 @@
 import assert from 'node:assert/strict';
 import {
   createSessionToken, verifyToken, buildCookie, buildClearCookie, parseCookies, COOKIE_NAME,
+  sign, base64Url, COOKIE_TTL_SECONDS,
 } from './core.js';
 
 const SECRET = 'test-secret';
+
+/** Firma un payload arbitrario con SECRET (para forjar tokens de prueba válidos en firma). */
+const mkToken = (obj: unknown): string => {
+  const p = base64Url(JSON.stringify(obj));
+  return `${p}.${sign(p, SECRET)}`;
+};
 
 (async () => {
   // 1) round-trip firma/verificación
@@ -59,5 +66,27 @@ const SECRET = 'test-secret';
     assert.equal(parsed['a'], '1');
     assert.deepEqual(parseCookies(undefined), {});
   }
-  console.log('✓ auth core: 8/8 casos pasaron');
+  // 8) TTL: token fresco válido; el MISMO token evaluado pasada la ventana → null
+  //    (una cookie capturada no debe valer indefinidamente: caduca por iat, no
+  //     sólo por el Max-Age del navegador).
+  {
+    const token = createSessionToken(SECRET);
+    assert.ok(verifyToken(token, SECRET), 'token fresco debe verificar');
+    const iat = verifyToken(token, SECRET)?.iat as number;
+    const justInside = iat + COOKIE_TTL_SECONDS * 1000 - 1000; // 1s antes de vencer
+    assert.ok(verifyToken(token, SECRET, justInside), 'dentro de la ventana debe verificar');
+    const justExpired = iat + COOKIE_TTL_SECONDS * 1000 + 1000; // 1s después de vencer
+    assert.equal(verifyToken(token, SECRET, justExpired), null, 'vencido debe rechazarse');
+  }
+  // 9) iat ausente → rechazado (fail-closed: sin iat no se puede probar frescura)
+  {
+    const noIat = mkToken({ sub: 'yd-admin', name: 'Llave Dorada Yani' });
+    assert.equal(verifyToken(noIat, SECRET), null, 'sin iat debe rechazarse');
+  }
+  // 10) iat no numérico → rechazado
+  {
+    const badIat = mkToken({ sub: 'yd-admin', iat: 'ayer', name: 'x' });
+    assert.equal(verifyToken(badIat, SECRET), null, 'iat no numérico debe rechazarse');
+  }
+  console.log('✓ auth core: 11/11 casos pasaron');
 })();
