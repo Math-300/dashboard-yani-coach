@@ -1,7 +1,11 @@
 # Runbook — Deploy prod + Revoke (cierre espejo anon)
 
-Estado: Task 0–5 hechas y revisadas en la rama `cierre-espejo-anon` (HEAD `d0c14d6`).
+Estado: Task 0–5 hechas y revisadas + hardening TTL de sesión, en la rama `cierre-espejo-anon` (HEAD `e3f01dd`).
 Falta lo que requiere el VPS (lo hace el usuario) y el revoke final.
+
+> ⚠️ Buildear la imagen web desde **HEAD `e3f01dd`** (no `d0c14d6`): incluye el fix de caducidad de sesión
+> (`api/auth/core.ts`, que `scripts/web` importa en runtime). Sin él, el endpoint `product-buyers` — que pasa a ser
+> la única defensa de los nombres tras el revoke — aceptaría cookies capturadas indefinidamente.
 
 Objetivo: que el tenedor anónimo de la `anon` key horneada en el bundle **no pueda leer ni una fila** de
 `contactos`, `interacciones`, `intentos_compra` — SIN que cambie ningún número del tablero.
@@ -88,8 +92,7 @@ Sólo después de confirmar que el tablero en prod carga bien con las filas vini
 (Vuelve a exponer los datos — sólo como medida temporal mientras se diagnostica.)
 
 ## Deudas anotadas para el review final (no bloquean el deploy)
-- `api/auth/core.ts`: `verifyToken` no valida `iat` vs TTL server-side → una cookie capturada vale indefinido.
-  Pre-existente, pero AHORA es la única defensa del endpoint `product-buyers` (nombres de clientas). Candidato
-  a arreglar antes del merge.
+- ~~`api/auth/core.ts`: `verifyToken` no valida `iat` vs TTL server-side~~ **RESUELTO** (commit `e3f01dd`): caduca
+  a las 12h por `iat`, fail-closed si falta; TDD 11/11. Viaja en la imagen web → buildear desde `e3f01dd`.
 - `services/dataSource.ts`: `requireTenant()` vestigial en las 4 funciones nuevas (no-op inofensivo).
 - `scripts/web/metricsRoutes.ts`: query de nombre de vendedora usa columnas propias en vez de reusar `getSellers`.
