@@ -26,6 +26,7 @@ WORKDIR /app
 RUN apk add --no-cache tini \
  && npm install --omit=dev --no-audit --no-fund \
       tsx@4.19.2 typescript@5.6.3 express@4.21.2 \
+      @supabase/supabase-js@2.103.3 \
  && npm cache clean --force
 COPY --from=build /app/dist ./dist
 COPY scripts/web/ ./scripts/web/

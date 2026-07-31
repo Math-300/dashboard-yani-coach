@@ -20,6 +20,15 @@ services:
       PORT: "8080"
       AUTH_PASSWORD: "${AUTH_PASSWORD:?set AUTH_PASSWORD}"
       AUTH_SECRET: "${AUTH_SECRET:?set AUTH_SECRET}"
+      # Cambio de postura de seguridad (Task 3, plan cierre-espejo-anon): el web
+      # antes NO tenía service_role — solo la anon key horneada en el bundle.
+      # Ahora sí, para poder servir filas de personas desde /api/metrics/*, pero
+      # SIEMPRE detrás del guard requireSession (cookie yd_auth válida). Nunca
+      # llega al navegador: vive solo en este proceso server-side. Mismo patrón
+      # de var requerida que ya usa yani_dashboard_sync más abajo.
+      SUPABASE_URL: "${SUPABASE_URL:?set SUPABASE_URL}"
+      SUPABASE_SERVICE_ROLE_KEY: "${SUPABASE_SERVICE_ROLE_KEY:?set SUPABASE_SERVICE_ROLE_KEY}"
+      SUPABASE_TENANT_ID: "${SUPABASE_TENANT_ID:-7558d73a-e97b-4422-ab5c-db87f6626592}"
     networks:
       - yanicoach
     deploy:

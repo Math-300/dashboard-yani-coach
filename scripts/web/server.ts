@@ -1,8 +1,10 @@
 /**
  * Servidor web de producción: sirve el bundle Vite (dist/) como SPA y expone
  * las rutas de auth por contraseña. Reemplaza a las serverless functions de Vercel.
- * Detrás de Traefik en el VPS. NO recibe service_role — solo anon (horneada en el
- * bundle en build-time) + AUTH_SECRET/AUTH_PASSWORD.
+ * Detrás de Traefik en el VPS. Cambio de postura (Task 3): el server SÍ tiene
+ * ahora un cliente service_role (ver supabaseService.ts) para poder servir filas
+ * de personas, pero todo endpoint que lo use va gated por requireSession
+ * (cookie yd_auth válida) — nunca se expone directo al navegador.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -12,6 +14,8 @@ import {
   COOKIE_NAME, COOKIE_TTL_SECONDS, createSessionToken, verifyToken,
   buildCookie, buildClearCookie, parseCookies, sign, timingSafeEqualStr,
 } from '../../api/auth/core.js';
+import { requireSession } from './requireSession.js';
+import { metricsRouter } from './metricsRoutes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '../../');
@@ -73,6 +77,12 @@ app.post('/api/auth/logout', (_req, res) => {
   res.setHeader('Set-Cookie', buildClearCookie(IS_PROD));
   return res.status(200).json({ success: true });
 });
+
+// Endpoints de datos (Task 4): mismas filas que dataSource.ts, leídas con
+// service_role, gated por requireSession — único guard, no hay otra defensa
+// (ver comentario en metricsRoutes.ts sobre /product-buyers). Incluye
+// /api/metrics/health (la ruta de humo de Task 3, ahora dentro del router).
+app.use('/api/metrics', requireSession, metricsRouter);
 
 // Estáticos + fallback SPA (toda ruta que no empiece con /api/ devuelve index.html)
 app.use(express.static(DIST));
